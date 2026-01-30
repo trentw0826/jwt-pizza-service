@@ -103,7 +103,8 @@ franchiseRouter.delete(
   })
 );
 
-// createStore
+// Creates a new store for a franchise
+// Only admins and franchise owners can create stores
 franchiseRouter.post(
   '/:franchiseId/store',
   authRouter.authenticateToken,

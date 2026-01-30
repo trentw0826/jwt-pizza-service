@@ -1,14 +1,20 @@
+// Import Express framework
 const express = require('express');
+
+// Import routers
 const { authRouter, setAuthUser } = require('./routes/authRouter.js');
 const orderRouter = require('./routes/orderRouter.js');
 const franchiseRouter = require('./routes/franchiseRouter.js');
 const userRouter = require('./routes/userRouter.js');
+
+// Import version and config
 const version = require('./version.json');
 const config = require('./config.js');
 
+// Initialize Express application
 const app = express();
-app.use(express.json());
-app.use(setAuthUser);
+app.use(express.json());  // Middleware to parse JSON request bodies
+app.use(setAuthUser);     // Custom middleware to set authenticated user if token is valid
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
@@ -17,6 +23,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// Set up API routes under /api using the imported routers
 const apiRouter = express.Router();
 app.use('/api', apiRouter);
 apiRouter.use('/auth', authRouter);
@@ -24,6 +31,7 @@ apiRouter.use('/user', userRouter);
 apiRouter.use('/order', orderRouter);
 apiRouter.use('/franchise', franchiseRouter);
 
+// Endpoint to provide API documentation
 apiRouter.use('/docs', (req, res) => {
   res.json({
     version: version.version,
@@ -32,6 +40,7 @@ apiRouter.use('/docs', (req, res) => {
   });
 });
 
+// Root endpoint providing welcome message and version
 app.get('/', (req, res) => {
   res.json({
     message: 'welcome to JWT Pizza',
@@ -39,6 +48,7 @@ app.get('/', (req, res) => {
   });
 });
 
+// Handle unknown endpoints with 404 response
 app.use('*', (req, res) => {
   res.status(404).json({
     message: 'unknown endpoint',
