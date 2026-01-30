@@ -4,8 +4,10 @@ const config = require('../config.js');
 const { asyncHandler } = require('../endpointHelper.js');
 const { DB, Role } = require('../database/database.js');
 
+// Create the auth router with Express
 const authRouter = express.Router();
 
+// Populate documentation for this router
 authRouter.docs = [
   {
     method: 'POST',
@@ -31,13 +33,17 @@ authRouter.docs = [
   },
 ];
 
+// Middleware to set req.user if a valid auth token is provided
+// This runs for every request to the service
+// Validates token against both JWT signature and database session
+// Adds isRole helper method to check user permissions
 async function setAuthUser(req, res, next) {
   const token = readAuthToken(req);
   if (token) {
     try {
       if (await DB.isLoggedIn(token)) {
         // Check the database to make sure the token is valid.
-        req.user = jwt.verify(token, config.jwtSecret);
+        req.user = jwt.verify(token, config.jwtSecret); // Verify JWT token by decoding it and checking signature
         req.user.isRole = (role) => !!req.user.roles.find((r) => r.role === role);
       }
     } catch {
@@ -90,12 +96,14 @@ authRouter.delete(
   })
 );
 
+// Creates JWT token for user and records it in database for session tracking
 async function setAuth(user) {
   const token = jwt.sign(user, config.jwtSecret);
   await DB.loginUser(user.id, token);
   return token;
 }
 
+// Helper to clear authentication for a user
 async function clearAuth(req) {
   const token = readAuthToken(req);
   if (token) {
@@ -103,6 +111,7 @@ async function clearAuth(req) {
   }
 }
 
+// Helper to read the auth token from the request headers
 function readAuthToken(req) {
   const authHeader = req.headers.authorization;
   if (authHeader) {

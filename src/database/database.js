@@ -9,6 +9,7 @@ class DB {
     this.initialized = this.initializeDatabase();
   }
 
+  // Retrieves all available menu items from the database
   async getMenu() {
     const connection = await this.getConnection();
     try {
@@ -29,6 +30,8 @@ class DB {
     }
   }
 
+  // Creates a new user with hashed password and assigns roles
+  // Handles special cases for franchisee role which requires linking to a franchise
   async addUser(user) {
     const connection = await this.getConnection();
     try {
@@ -55,6 +58,8 @@ class DB {
     }
   }
 
+  // Retrieves user by email and verifies password if provided
+  // Returns user with all assigned roles but excludes password from response
   async getUser(email, password) {
     const connection = await this.getConnection();
     try {
@@ -99,6 +104,8 @@ class DB {
     }
   }
 
+  // Records authentication token in database for session tracking
+  // Stores only the signature portion of the JWT for security
   async loginUser(userId, token) {
     token = this.getTokenSignature(token);
     const connection = await this.getConnection();
@@ -130,6 +137,7 @@ class DB {
     }
   }
 
+  // Retrieves paginated order history for a user including all order items
   async getOrders(user, page = 1) {
     const connection = await this.getConnection();
     try {
@@ -160,6 +168,8 @@ class DB {
     }
   }
 
+  // Creates a new franchise and assigns admin users with franchisee role
+  // Admins must already exist in the system before being assigned to a franchise
   async createFranchise(franchise) {
     const connection = await this.getConnection();
     try {
@@ -185,6 +195,8 @@ class DB {
     }
   }
 
+  // Deletes a franchise and all associated stores and user roles
+  // Uses transaction to ensure all deletions succeed or none do
   async deleteFranchise(franchiseId) {
     const connection = await this.getConnection();
     try {
@@ -203,6 +215,8 @@ class DB {
     }
   }
 
+  // Retrieves paginated list of franchises with optional name filtering
+  // Admin users receive full franchise details including revenue, others get basic info
   async getFranchises(authUser, page = 0, limit = 10, nameFilter = '*') {
     const connection = await this.getConnection();
 
@@ -249,6 +263,7 @@ class DB {
     }
   }
 
+  // Enriches franchise object with admin users and stores including total revenue per store
   async getFranchise(franchise) {
     const connection = await this.getConnection();
     try {
@@ -285,6 +300,8 @@ class DB {
     return (currentPage - 1) * [listPerPage];
   }
 
+  // Extracts the signature portion of a JWT token for database storage
+  // JWTs have three parts: header.payload.signature
   getTokenSignature(token) {
     const parts = token.split('.');
     if (parts.length > 2) {
@@ -326,6 +343,8 @@ class DB {
     return connection;
   }
 
+  // Initializes the database schema and creates default admin user on first run
+  // Called automatically when DB class is instantiated
   async initializeDatabase() {
     try {
       const connection = await this._getConnection(false);

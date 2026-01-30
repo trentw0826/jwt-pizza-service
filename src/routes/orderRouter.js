@@ -72,7 +72,8 @@ orderRouter.get(
   })
 );
 
-// createOrder
+// Creates an order in the database then forwards it to the pizza factory service for fulfillment
+// Returns both the order details and a JWT from the factory for verification
 orderRouter.post(
   '/',
   authRouter.authenticateToken,
@@ -85,6 +86,9 @@ orderRouter.post(
       body: JSON.stringify({ diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order }),
     });
     const j = await r.json();
+    // print request and response
+    console.log('Request to factory:', { diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order });
+    console.log('Response from factory:', j);
     if (r.ok) {
       res.send({ order, followLinkToEndChaos: j.reportUrl, jwt: j.jwt });
     } else {
