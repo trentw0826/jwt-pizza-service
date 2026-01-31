@@ -1,5 +1,10 @@
-function randomName() {
-  return Math.random().toString(36).substring(2, 12);
+function generateRandomString(length = 10) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_!@#$%^&*()-+=';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 }
 
 function expectValidJwt(potentialJwt) {
@@ -9,6 +14,6 @@ function expectValidJwt(potentialJwt) {
 }
 
 module.exports = {
-  randomName,
+  generateRandomString,
   expectValidJwt,
 };
