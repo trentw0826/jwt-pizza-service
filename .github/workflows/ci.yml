@@ -5,12 +5,12 @@ on:
     branches:
       - main
   workflow_dispatch:
+
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
     services:
-      # MySQL service for testing
       mysql:
         image: mysql:8.0.29
         env:
@@ -19,7 +19,10 @@ jobs:
         ports:
           - "3306:3306"
         options: >-
-          --health-cmd "mysqladmin ping -ptempdbpassword" --health-interval 10s --health-start-period 10s --health-timeout 5s --health-retries 10
+          --health-cmd "mysqladmin ping -ptempdbpassword"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
 
     # Set version output for downstream jobs
     outputs:
@@ -35,6 +38,23 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+      
+      # - name: Install MySQL client
+      #   run: |
+      #     apt-get update
+      #     apt-get install -y mysql-client
+
+      # - name: Wait for MySQL
+      #   run: |
+      #     echo "Waiting for MySQL..."
+      #     for i in {1..20}; do
+      #       mysqladmin ping -hmysql -uroot -ptempdbpassword && break
+      #       echo "MySQL not ready yet, retry $i..."
+      #       sleep 3
+      #     echo "MySQL is ready."
+      #     sleep 100000
+      #     done
+          
 
       - name: Write config file
         run: |
@@ -55,14 +75,15 @@ jobs:
               apiKey: '${{ secrets.FACTORY_API_KEY }}',
             },
           };" > src/config.js
+          sleep 100000
 
-      - name: Tests
+      - name: Run tests
         run: npm test
 
-      - name: Lint
+      - name: Run Linter
         run: npm run lint
 
-      - name: set version
+      - name: Set version
         id: set_version
         run: |
           version=$(date +'%Y%m%d.%H%M%S')

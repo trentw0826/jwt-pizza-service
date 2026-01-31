@@ -1,6 +1,6 @@
 const request = require("supertest");
-const app = require("../src/service");
-const { expectValidJwt } = require("./testHelper");
+const app = require("../../src/service");
+const { expectValidJwt } = require("../testHelper");
 
 const testUser = { name: "pizza diner", email: "", password: "a" };
 let testUserAuthToken;
