@@ -1,64 +1,32 @@
 const request = require('supertest');
 const app = require('../../src/service');
 const { Role, DB } = require('../../src/database/database.js');
-const { generateRandomString, expectValidJwt } = require('../testHelper');
+const {
+  generateRandomString,
+  expectValidJwt,
+  createUserWithRole,
+} = require('../testHelper');
 
 describe('User Router', () => {
   let adminUser;
-  let adminAuthToken;
   let regularUser;
-  let regularUserAuthToken;
   let otherUser;
-  let otherUserAuthToken;
 
   beforeAll(async () => {
     // Wait for database to be ready
     await DB.initialized;
 
-    // Create an admin user
-    adminUser = {
-      name: generateRandomString(),
-      email: `${generateRandomString()}@test.com`,
-      password: 'adminpass',
-    };
-    const adminData = await DB.addUser({
-      ...adminUser,
-      roles: [{ role: Role.Admin }],
-    });
-    adminUser.id = adminData.id;
-
-    const adminLoginRes = await request(app).put('/api/auth').send({
-      email: adminUser.email,
-      password: adminUser.password,
-    });
-    adminAuthToken = adminLoginRes.body.token;
-
-    // Create a regular user
-    regularUser = {
-      name: generateRandomString(),
-      email: `${generateRandomString()}@test.com`,
-      password: 'userpass',
-    };
-    const regularUserRes = await request(app).post('/api/auth').send(regularUser);
-    regularUserAuthToken = regularUserRes.body.token;
-    regularUser.id = regularUserRes.body.user.id;
-
-    // Create another regular user
-    otherUser = {
-      name: generateRandomString(),
-      email: `${generateRandomString()}@test.com`,
-      password: 'otherpass',
-    };
-    const otherUserRes = await request(app).post('/api/auth').send(otherUser);
-    otherUserAuthToken = otherUserRes.body.token;
-    otherUser.id = otherUserRes.body.user.id;
+    // Create users
+    adminUser = await createUserWithRole(app, Role.Admin);
+    regularUser = await createUserWithRole(app, Role.Diner);
+    otherUser = await createUserWithRole(app, Role.Diner);
   });
 
   describe('GET /api/user/me', () => {
     test('should get authenticated user info', async () => {
       const res = await request(app)
         .get('/api/user/me')
-        .set('Authorization', `Bearer ${regularUserAuthToken}`);
+        .set('Authorization', `Bearer ${regularUser.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('id', regularUser.id);
@@ -72,7 +40,7 @@ describe('User Router', () => {
     test('should get admin user info', async () => {
       const res = await request(app)
         .get('/api/user/me')
-        .set('Authorization', `Bearer ${adminAuthToken}`);
+        .set('Authorization', `Bearer ${adminUser.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('id', adminUser.id);
@@ -103,7 +71,7 @@ describe('User Router', () => {
       const newName = generateRandomString();
       const res = await request(app)
         .put(`/api/user/${regularUser.id}`)
-        .set('Authorization', `Bearer ${regularUserAuthToken}`)
+        .set('Authorization', `Bearer ${regularUser.token}`)
         .send({
           name: newName,
           email: regularUser.email,
@@ -120,14 +88,14 @@ describe('User Router', () => {
 
       // Update local user data for subsequent tests
       regularUser.name = newName;
-      regularUserAuthToken = res.body.token;
+      regularUser.token = res.body.token;
     });
 
     test('should update own user email', async () => {
       const newEmail = `${generateRandomString()}@test.com`;
       const res = await request(app)
         .put(`/api/user/${regularUser.id}`)
-        .set('Authorization', `Bearer ${regularUserAuthToken}`)
+        .set('Authorization', `Bearer ${regularUser.token}`)
         .send({
           name: regularUser.name,
           email: newEmail,
@@ -140,14 +108,14 @@ describe('User Router', () => {
 
       // Update local user data
       regularUser.email = newEmail;
-      regularUserAuthToken = res.body.token;
+      regularUser.token = res.body.token;
     });
 
     test('should update own user password', async () => {
       const newPassword = generateRandomString();
       const res = await request(app)
         .put(`/api/user/${regularUser.id}`)
-        .set('Authorization', `Bearer ${regularUserAuthToken}`)
+        .set('Authorization', `Bearer ${regularUser.token}`)
         .send({
           name: regularUser.name,
           email: regularUser.email,
@@ -166,7 +134,7 @@ describe('User Router', () => {
 
       expect(loginRes.status).toBe(200);
       regularUser.password = newPassword;
-      regularUserAuthToken = loginRes.body.token;
+      regularUser.token = loginRes.body.token;
     });
 
     test('should update multiple fields at once', async () => {
@@ -176,7 +144,7 @@ describe('User Router', () => {
 
       const res = await request(app)
         .put(`/api/user/${regularUser.id}`)
-        .set('Authorization', `Bearer ${regularUserAuthToken}`)
+        .set('Authorization', `Bearer ${regularUser.token}`)
         .send({
           name: newName,
           email: newEmail,
@@ -192,14 +160,14 @@ describe('User Router', () => {
       regularUser.name = newName;
       regularUser.email = newEmail;
       regularUser.password = newPassword;
-      regularUserAuthToken = res.body.token;
+      regularUser.token = res.body.token;
     });
 
     test('should allow admin to update other users', async () => {
       const newName = generateRandomString();
       const res = await request(app)
         .put(`/api/user/${otherUser.id}`)
-        .set('Authorization', `Bearer ${adminAuthToken}`)
+        .set('Authorization', `Bearer ${adminUser.token}`)
         .send({
           name: newName,
           email: otherUser.email,
@@ -214,7 +182,7 @@ describe('User Router', () => {
     test('should prevent non-admin from updating other users', async () => {
       const res = await request(app)
         .put(`/api/user/${otherUser.id}`)
-        .set('Authorization', `Bearer ${regularUserAuthToken}`)
+        .set('Authorization', `Bearer ${regularUser.token}`)
         .send({
           name: generateRandomString(),
           email: otherUser.email,
@@ -239,10 +207,10 @@ describe('User Router', () => {
     });
 
     test('should return new token after update', async () => {
-      const oldToken = regularUserAuthToken;
+      const oldToken = regularUser.token;
       const res = await request(app)
         .put(`/api/user/${regularUser.id}`)
-        .set('Authorization', `Bearer ${regularUserAuthToken}`)
+        .set('Authorization', `Bearer ${regularUser.token}`)
         .send({
           name: generateRandomString(),
           email: regularUser.email,
@@ -260,7 +228,7 @@ describe('User Router', () => {
     test('should return not implemented', async () => {
       const res = await request(app)
         .delete(`/api/user/${regularUser.id}`)
-        .set('Authorization', `Bearer ${regularUserAuthToken}`);
+        .set('Authorization', `Bearer ${regularUser.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.message).toBe('not implemented');
@@ -278,7 +246,7 @@ describe('User Router', () => {
     test('should return not implemented', async () => {
       const res = await request(app)
         .get('/api/user')
-        .set('Authorization', `Bearer ${adminAuthToken}`);
+        .set('Authorization', `Bearer ${adminUser.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.message).toBe('not implemented');
@@ -299,7 +267,7 @@ describe('User Router', () => {
     test('should be accessible by regular users', async () => {
       const res = await request(app)
         .get('/api/user')
-        .set('Authorization', `Bearer ${regularUserAuthToken}`);
+        .set('Authorization', `Bearer ${regularUser.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.message).toBe('not implemented');

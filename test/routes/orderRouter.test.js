@@ -1,13 +1,17 @@
 const request = require('supertest');
 const app = require('../../src/service');
 const { Role, DB } = require('../../src/database/database.js');
-const { generateRandomString, expectValidJwt } = require('../testHelper');
+const {
+  generateRandomString,
+  createUserWithRole,
+  createTestFranchise,
+  createTestStore,
+  createTestMenuItem,
+} = require('../testHelper');
 
 describe('Order Router', () => {
   let testUser;
-  let testUserAuthToken;
   let adminUser;
-  let adminAuthToken;
   let testFranchise;
   let testStore;
   let testMenuItem;
@@ -16,44 +20,13 @@ describe('Order Router', () => {
     // Wait for database to be ready
     await DB.initialized;
 
-    // Create a regular test user
-    testUser = {
-      name: generateRandomString(),
-      email: `${generateRandomString()}@test.com`,
-      password: 'password123',
-    };
-    const registerRes = await request(app).post('/api/auth').send(testUser);
-    testUserAuthToken = registerRes.body.token;
-    testUser.id = registerRes.body.user.id;
+    // Create users
+    testUser = await createUserWithRole(app, Role.Diner);
+    adminUser = await createUserWithRole(app, Role.Admin);
 
-    // Create an admin user
-    adminUser = {
-      name: generateRandomString(),
-      email: `${generateRandomString()}@test.com`,
-      password: 'adminpass',
-    };
-    const adminData = await DB.addUser({
-      ...adminUser,
-      roles: [{ role: Role.Admin }],
-    });
-    adminUser.id = adminData.id;
-
-    // Get admin auth token
-    const adminLoginRes = await request(app).put('/api/auth').send({
-      email: adminUser.email,
-      password: adminUser.password,
-    });
-    adminAuthToken = adminLoginRes.body.token;
-
-    // Create franchise and store for order tests
-    testFranchise = {
-      name: generateRandomString(),
-      admins: [{ email: adminUser.email }],
-    };
-    const franchise = await DB.createFranchise(testFranchise);
-    testFranchise.id = franchise.id;
-
-    testStore = await DB.createStore(testFranchise.id, { name: generateRandomString() });
+    // Create franchise and store
+    testFranchise = await createTestFranchise(adminUser.email);
+    testStore = await createTestStore(testFranchise.id);
 
     // Add a menu item
     testMenuItem = {
@@ -95,7 +68,7 @@ describe('Order Router', () => {
 
       const res = await request(app)
         .put('/api/order/menu')
-        .set('Authorization', `Bearer ${adminAuthToken}`)
+        .set('Authorization', `Bearer ${adminUser.token}`)
         .send(newItem);
 
       expect(res.status).toBe(200);
@@ -130,7 +103,7 @@ describe('Order Router', () => {
 
       const res = await request(app)
         .put('/api/order/menu')
-        .set('Authorization', `Bearer ${testUserAuthToken}`)
+        .set('Authorization', `Bearer ${testUser.token}`)
         .send(newItem);
 
       expect(res.status).toBe(403);
@@ -142,7 +115,7 @@ describe('Order Router', () => {
     test('should get orders for authenticated user', async () => {
       const res = await request(app)
         .get('/api/order')
-        .set('Authorization', `Bearer ${testUserAuthToken}`);
+        .set('Authorization', `Bearer ${testUser.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('dinerId');
@@ -162,7 +135,7 @@ describe('Order Router', () => {
     test('should support pagination', async () => {
       const res = await request(app)
         .get('/api/order?page=2')
-        .set('Authorization', `Bearer ${testUserAuthToken}`);
+        .set('Authorization', `Bearer ${testUser.token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.page).toBe('2'); // Query params come as strings
@@ -205,7 +178,7 @@ describe('Order Router', () => {
 
       const res = await request(app)
         .post('/api/order')
-        .set('Authorization', `Bearer ${testUserAuthToken}`)
+        .set('Authorization', `Bearer ${testUser.token}`)
         .send(orderRequest);
 
       expect(res.status).toBe(200);
@@ -276,7 +249,7 @@ describe('Order Router', () => {
 
       const res = await request(app)
         .post('/api/order')
-        .set('Authorization', `Bearer ${testUserAuthToken}`)
+        .set('Authorization', `Bearer ${testUser.token}`)
         .send(orderRequest);
 
       expect(res.status).toBe(500);
@@ -316,7 +289,7 @@ describe('Order Router', () => {
 
       const res = await request(app)
         .post('/api/order')
-        .set('Authorization', `Bearer ${testUserAuthToken}`)
+        .set('Authorization', `Bearer ${testUser.token}`)
         .send(orderRequest);
 
       expect(res.status).toBe(200);
