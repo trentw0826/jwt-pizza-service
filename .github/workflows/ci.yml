@@ -75,7 +75,6 @@ jobs:
               apiKey: '${{ secrets.FACTORY_API_KEY }}',
             },
           };" > src/config.js
-          sleep 100000
 
       - name: Run tests
         run: npm test
