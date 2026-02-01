@@ -64,22 +64,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      # - name: Install MySQL client
-      #   run: |
-      #     apt-get update
-      #     apt-get install -y mysql-client
-
-      # - name: Wait for MySQL
-      #   run: |
-      #     echo "Waiting for MySQL..."
-      #     for i in {1..20}; do
-      #       mysqladmin ping -hmysql -uroot -ptempdbpassword && break
-      #       echo "MySQL not ready yet, retry $i..."
-      #       sleep 3
-      #     echo "MySQL is ready."
-      #     sleep 100000
-      #     done
+      - name: Test database connection
+        run: |
+          echo "Testing MySQL connection..."
+          npm install -g wait-port
+          wait-port 127.0.0.1:3306 -t 30000
           
+          # Test connection with Node.js
+          node -e "
+          const mysql = require('mysql2/promise');
+          (async () => {
+            try {
+              const connection = await mysql.createConnection({
+                host: '127.0.0.1',
+                user: 'root',
+                password: 'tempdbpassword',
+                database: 'pizza',
+                connectTimeout: 60000
+              });
+              console.log('✓ Successfully connected to MySQL database');
+              await connection.end();
+              process.exit(0);
+            } catch (error) {
+              console.error('✗ Failed to connect to MySQL:', error.message);
+              process.exit(1);
+            }
+          })();
+          "
 
       - name: Write config file
         run: |
