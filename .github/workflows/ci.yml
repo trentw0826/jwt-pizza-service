@@ -5,12 +5,12 @@ on:
     branches:
       - main
   workflow_dispatch:
+
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
     services:
-      # MySQL service for testing
       mysql:
         image: mysql:8.0.29
         env:
@@ -19,12 +19,40 @@ jobs:
         ports:
           - "3306:3306"
         options: >-
-          --health-cmd "mysqladmin ping -ptempdbpassword" --health-interval 10s --health-start-period 10s --health-timeout 5s --health-retries 10
+          --health-cmd "mysqladmin ping -ptempdbpassword"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
 
     # Set version output for downstream jobs
     outputs:
       version: ${{ steps.set_version.outputs.version }}
     steps:
+      - name: Verify required secrets are present
+        shell: bash
+        run: |
+          missing=0
+
+          check_secret () {
+            name="$1"
+            value="$2"
+            if [ -z "$value" ]; then
+              echo "::error::Missing required secret: $name"
+              missing=1
+            else
+              echo "Secret $name is present"
+            fi
+          }
+
+          check_secret "FACTORY_API_KEY" "${{ secrets.FACTORY_API_KEY }}"
+          check_secret "JWT_SECRET" "${{ secrets.JWT_SECRET }}"
+          check_secret "NET_ID" "${{ secrets.NET_ID }}"
+
+          if [ "$missing" -eq 1 ]; then
+            echo "One or more required secrets are missing"
+            exit 1
+          fi
+      
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -35,6 +63,34 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+      
+      - name: Test database connection
+        run: |
+          echo "Testing MySQL connection..."
+          npm install -g wait-port
+          wait-port 127.0.0.1:3306 -t 30000
+          
+          # Test connection with Node.js
+          node -e "
+          const mysql = require('mysql2/promise');
+          (async () => {
+            try {
+              const connection = await mysql.createConnection({
+                host: '127.0.0.1',
+                user: 'root',
+                password: 'tempdbpassword',
+                database: 'pizza',
+                connectTimeout: 60000
+              });
+              console.log('✓ Successfully connected to MySQL database');
+              await connection.end();
+              process.exit(0);
+            } catch (error) {
+              console.error('✗ Failed to connect to MySQL:', error.message);
+              process.exit(1);
+            }
+          })();
+          "
 
       - name: Write config file
         run: |
@@ -56,13 +112,13 @@ jobs:
             },
           };" > src/config.js
 
-      - name: Tests
+      - name: Run tests
         run: npm test
 
-      - name: Lint
+      - name: Run Linter
         run: npm run lint
 
-      - name: set version
+      - name: Set version
         id: set_version
         run: |
           version=$(date +'%Y%m%d.%H%M%S')
