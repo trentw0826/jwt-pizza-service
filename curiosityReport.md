@@ -8,7 +8,7 @@ My initial idea was to bundle up my whole project in a reproducible docker conta
 
 ## Overview
 
-TODO
+- Secrets are not pulled in remotely (though their names are). This caused me a lot of headache until I realized I just needed to create a local .secrets file
 
 ## Credits
 
