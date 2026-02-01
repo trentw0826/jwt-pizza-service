@@ -28,6 +28,31 @@ jobs:
     outputs:
       version: ${{ steps.set_version.outputs.version }}
     steps:
+      - name: Verify required secrets are present
+        shell: bash
+        run: |
+          missing=0
+
+          check_secret () {
+            name="$1"
+            value="$2"
+            if [ -z "$value" ]; then
+              echo "::error::Missing required secret: $name"
+              missing=1
+            else
+              echo "Secret $name is present"
+            fi
+          }
+
+          check_secret "FACTORY_API_KEY" "${{ secrets.FACTORY_API_KEY }}"
+          check_secret "JWT_SECRET" "${{ secrets.JWT_SECRET }}"
+          check_secret "NET_ID" "${{ secrets.NET_ID }}"
+
+          if [ "$missing" -eq 1 ]; then
+            echo "One or more required secrets are missing"
+            exit 1
+          fi
+      
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -75,7 +100,6 @@ jobs:
               apiKey: '${{ secrets.FACTORY_API_KEY }}',
             },
           };" > src/config.js
-          sleep 100000
 
       - name: Run tests
         run: npm test
