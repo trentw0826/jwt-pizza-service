@@ -8,23 +8,28 @@ As we implemented more functionality into our CI pipeline during deliverable #3,
 
 My initial idea was to bundle up my whole project in a reproducible docker container. While this is certainly best practice long-term, I received feedback that it wasn't very realistic at such early stages of such a small project. I then discovered 'Act' by Nektos, a solution for running Github actions locally.
 
-## Exploring 'Act'
+## Exploring Act
 
 After having trouble installing Act's CLI agent, I found out that the service is offered through a VS Code extension. From what I understand, Act looks your repository’s .github/workflows directory to detect valid workflow files and allows you to run them locally inside Docker containers. These containers closely mirror GitHub’s remote environments for the sake of reproducibility. When a workflow is triggered, Act spins containers for each job, mounts your local repository into the container, starts a simulated GitHub event, and executes each step exactly as GitHub Actions would.
 
 ![Working local CI pipeline](./images/local-CI-pipeline-working.gif)
 
-I found that some of the most useful features are
+## Setup
 
-- The ability to manually select which workflow and job to run
-- Direct simulation of Github events (like the `push` vs `workflow_dispatch` events used for JWT Pizza)
-- Terminal outputs for debugging
-- The ability to inspect container state mid-run (for debugging environment variables, for example)
+1. Install Docker: Act requires Docker to be installed and running on your machine, make sure the Docker engine is working
 
-## Usage Tips From Personal Experience
+2. VS Code Extension: In VS Code, search for "GitHub Local Actions" by Nektos in the Extensions marketplace and install it.
 
-- You may experience conflicts if running MySQL locally as Docker tries to expose MySQL locally on port 3306. You can temporarily turn pause mysql, or use a different port.
-- Secrets are not pulled in remotely (though their names are). This caused me a lot of headache.
+3. Set Up Secrets: If your workflows use secrets (like JWT Pizza), I've found the easiest way is to edit the 'Secrets' setting directly in the bottom left-hand corner of the extension's tab. The extension will automatically use this file to populate secrets during local runs. Repository secrets are NOT pulled in directly from Gitub, though their names are.
+
+4. Run A Workflow: Click on workflow in the Local Actions panel (the ones defined with `.yml` files), select the job you want to run, and click the play button. The extension will pull the necessary Docker images (this may take a few minutes the first time) and execute your workflow locally.
+
+5. Try Different Events: The extension supports easy simulation of different Github events like `push` and `workflow_dispatch` (like the ones used in JWT Pizza). This makes it easy to test events that can otherwise be difficult to reproduce.
+
+## Setup Notes
+
+- You may experience conflicts if running MySQL locally as Docker tries to expose MySQL locally on port 3306. You can temporarily turn pause your local mysql service or use a different port.
+- [Example video](./images/act-demonstration.mp4) demonstrating installing and using Local Github Actions to speed up a debugging process
 
 ## Credits
 
