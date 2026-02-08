@@ -52,7 +52,7 @@ jobs:
             echo "One or more required secrets are missing"
             exit 1
           fi
-      
+
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -63,13 +63,13 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Test database connection
         run: |
           echo "Testing MySQL connection..."
           npm install -g wait-port
           wait-port 127.0.0.1:3306 -t 30000
-          
+
           # Test connection with Node.js
           node -e "
           const mysql = require('mysql2/promise');
@@ -126,6 +126,7 @@ jobs:
           printf '{"version": "%s" }' "$version" > src/version.json
 
       - name: Update coverage
+        if: github.actions == true
         run: |
           coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
           color=$(echo "$coverage < 80" | bc | awk '{if ($1) print "red"; else print "green"}')
