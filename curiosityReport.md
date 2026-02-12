@@ -26,9 +26,31 @@ After having trouble installing Act's CLI agent, I found out that the service is
 
 5. Try Different Events: The extension supports easy simulation of different Github events like `push` and `workflow_dispatch` (like the ones used in JWT Pizza). This makes it easy to test events that can otherwise be difficult to reproduce.
 
+## Handling Lack of GitHub Backend
+
+Act runs workflows inside Docker containers, but it cannot replicate GitHub’s backend services. Steps that depend on GitHub infrastructure (deployment to Github Pages, for example) will not function correctly during local runs.
+
+Act sets an `ACT=true` environment variable during local runs. Use it to conditionally skip backend-dependent steps:
+
+```yaml
+jobs:
+    hello:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Hello World
+                run: echo "Hello World"
+            - name: Checking if actions are local
+                if: ${{ env.ACT }}
+                run: echo "This is a local run"
+            - name: Checking if actions are running in GitHub
+                if: ${{ !env.ACT }}
+                run: echo "This is a GitHub run"
+                run: echo "You could deploy to Github Pages here"
+```
+
 ## Setup Notes
 
-- You may experience conflicts if running MySQL locally as Docker tries to expose MySQL locally on port 3306. You can temporarily turn pause your local mysql service or use a different port.
+- You may experience conflicts if running MySQL locally because Docker tries to expose MySQL on port 3306. You can temporarily pause your local MySQL service or use a different port.
 - [Example video](./images/act-demonstration.mp4) demonstrating installing and using Local Github Actions to speed up a debugging process
 
 ## Credits
