@@ -323,6 +323,93 @@ describe("Database Tests", () => {
   });
 });
 
+// =============================================================================
+// Additional DB Layer Coverage
+// =============================================================================
+
+describe("DB.deleteUser", () => {
+  test("user no longer exists in the DB after deletion", async () => {
+    const user = await DB.addUser({
+      name: "Delete Test",
+      email: `del-${Date.now()}@test.com`,
+      password: "pass",
+      roles: [{ role: Role.Diner }],
+    });
+
+    await DB.deleteUser(user.id);
+    await expect(DB.getUser(user.email, "pass")).rejects.toThrow(
+      "unknown user",
+    );
+  });
+
+  test("auth tokens are cleared on deletion", async () => {
+    const user = await DB.addUser({
+      name: "Token Delete",
+      email: `tokdel-${Date.now()}@test.com`,
+      password: "pass",
+      roles: [{ role: Role.Diner }],
+    });
+    const token = "del.token.test";
+    await DB.loginUser(user.id, token);
+    expect(await DB.isLoggedIn(token)).toBe(true);
+
+    await DB.deleteUser(user.id);
+    expect(await DB.isLoggedIn(token)).toBe(false);
+  });
+});
+
+describe("DB.updateUser — partial field updates", () => {
+  test("name-only update does not change email", async () => {
+    const original = await DB.addUser({
+      name: "Partial Update",
+      email: `partial-${Date.now()}@test.com`,
+      password: "pass",
+      roles: [{ role: Role.Diner }],
+    });
+
+    const updated = await DB.updateUser(
+      original.id,
+      "New Name",
+      original.email,
+      original.password,
+    );
+    expect(updated.name).toBe("New Name");
+    expect(updated.email).toBe(original.email);
+  });
+
+  test("email-only update does not change name", async () => {
+    const original = await DB.addUser({
+      name: "Email Only",
+      email: `emailonly-${Date.now()}@test.com`,
+      password: "pass",
+      roles: [{ role: Role.Diner }],
+    });
+    const newEmail = `new-${Date.now()}@test.com`;
+
+    const updated = await DB.updateUser(
+      original.id,
+      original.name,
+      newEmail,
+      original.password,
+    );
+    expect(updated.name).toBe(original.name);
+    expect(updated.email).toBe(newEmail);
+  });
+});
+
+describe("DB.addUser — duplicate email", () => {
+  test("adding a user with an existing email throws", async () => {
+    const userData = {
+      name: "Dup Email",
+      email: `dup-${Date.now()}@test.com`,
+      password: "pass",
+      roles: [{ role: Role.Diner }],
+    };
+    await DB.addUser(userData);
+    await expect(DB.addUser(userData)).rejects.toThrow();
+  });
+});
+
 const { fixtures, seedTestDatabase } = require("../testHelper.js");
 
 describe("Seed Data Verification", () => {

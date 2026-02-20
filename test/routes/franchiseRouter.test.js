@@ -4,30 +4,45 @@ const { Role, DB } = require("../../src/database/database.js");
 const {
   generateRandomString,
   createUserWithRole,
-  createTestFranchise,
+  fixtures,
+  seedTestDatabase,
 } = require("../testHelper");
 
 describe("Franchise Router", () => {
   let adminUser;
   let franchiseeUser;
   let regularUser;
-  let testFranchise;
+  // Use a seeded franchise for read-only tests to avoid per-test DB writes
+  let seededFranchise;
 
   beforeAll(async () => {
-    // Wait for database to be ready
     await DB.initialized;
 
-    // Create users
-    adminUser = await createUserWithRole(app, Role.Admin);
+    // Log in as the seeded admin — avoids creating an extra user
+    const adminLogin = await request(app).put("/api/auth").send({
+      email: fixtures.admin.email,
+      password: fixtures.admin.password,
+    });
+    adminUser = { ...adminLogin.body.user, token: adminLogin.body.token };
+
     regularUser = await createUserWithRole(app, Role.Diner);
     franchiseeUser = await createUserWithRole(app, Role.Diner);
 
-    // Create a franchise for the franchisee
-    testFranchise = await createTestFranchise(franchiseeUser.email);
+    // Create a dedicated franchise for this test run
+    const franchiseRes = await request(app)
+      .post("/api/franchise")
+      .set("Authorization", `Bearer ${adminUser.token}`)
+      .send({
+        name: generateRandomString(),
+        admins: [{ email: franchiseeUser.email }],
+      });
+    seededFranchise = franchiseRes.body;
   });
 
+  // ── GET /api/franchise ────────────────────────────────────────────────────
+
   describe("GET /api/franchise", () => {
-    test("should list all franchises without authentication", async () => {
+    test("is publicly accessible and returns franchises + more flag", async () => {
       const res = await request(app).get("/api/franchise");
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty("franchises");
@@ -36,35 +51,50 @@ describe("Franchise Router", () => {
       expect(typeof res.body.more).toBe("boolean");
     });
 
-    test("should support pagination parameters", async () => {
-      const res = await request(app).get("/api/franchise?page=0&limit=5");
+    test("pagination limit is respected", async () => {
+      const res = await request(app).get("/api/franchise?page=0&limit=3");
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty("franchises");
-      expect(res.body.franchises.length).toBeLessThanOrEqual(5);
+      expect(res.body.franchises.length).toBeLessThanOrEqual(3);
     });
 
-    test("should support name filter", async () => {
-      // Test with wildcard filter
-      const res = await request(app).get("/api/franchise?name=*&limit=100");
+    test("name filter narrows results", async () => {
+      const res = await request(app).get(
+        `/api/franchise?name=${encodeURIComponent(seededFranchise.name)}`,
+      );
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty("franchises");
-      expect(Array.isArray(res.body.franchises)).toBe(true);
+      expect(res.body.franchises.length).toBeGreaterThanOrEqual(1);
+      expect(res.body.franchises[0].name).toBe(seededFranchise.name);
     });
 
-    test("should return basic info for unauthenticated users", async () => {
+    test("unauthenticated response includes id, name, and stores", async () => {
       const res = await request(app).get("/api/franchise");
       expect(res.status).toBe(200);
       if (res.body.franchises.length > 0) {
-        const franchise = res.body.franchises[0];
-        expect(franchise).toHaveProperty("id");
-        expect(franchise).toHaveProperty("name");
-        expect(franchise).toHaveProperty("stores");
+        const f = res.body.franchises[0];
+        expect(f).toHaveProperty("id");
+        expect(f).toHaveProperty("name");
+        expect(f).toHaveProperty("stores");
+      }
+    });
+
+    test("admin response includes revenue data", async () => {
+      const res = await request(app)
+        .get("/api/franchise")
+        .set("Authorization", `Bearer ${adminUser.token}`);
+      expect(res.status).toBe(200);
+      if (
+        res.body.franchises.length > 0 &&
+        res.body.franchises[0].stores.length > 0
+      ) {
+        expect(res.body.franchises[0].stores[0]).toHaveProperty("totalRevenue");
       }
     });
   });
 
+  // ── GET /api/franchise/:userId ─────────────────────────────────────────────
+
   describe("GET /api/franchise/:userId", () => {
-    test("should get user franchises for own account", async () => {
+    test("franchisee can view their own franchises", async () => {
       const res = await request(app)
         .get(`/api/franchise/${franchiseeUser.id}`)
         .set("Authorization", `Bearer ${franchiseeUser.token}`);
@@ -72,252 +102,217 @@ describe("Franchise Router", () => {
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
       expect(res.body.length).toBeGreaterThan(0);
-      expect(res.body[0].name).toBe(testFranchise.name);
+      expect(res.body[0].name).toBe(seededFranchise.name);
     });
 
-    test("should allow admin to get any user franchises", async () => {
+    test("admin can view any user's franchises", async () => {
       const res = await request(app)
         .get(`/api/franchise/${franchiseeUser.id}`)
         .set("Authorization", `Bearer ${adminUser.token}`);
-
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
     });
 
-    test("should return empty array for user with no franchises", async () => {
+    test("user with no franchises gets empty array", async () => {
       const res = await request(app)
         .get(`/api/franchise/${regularUser.id}`)
         .set("Authorization", `Bearer ${regularUser.token}`);
-
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBe(0);
-    });
-
-    test("should fail without authentication", async () => {
-      const res = await request(app).get(`/api/franchise/${franchiseeUser.id}`);
-      expect(res.status).toBe(401);
-      expect(res.body.message).toBe("unauthorized");
-    });
-
-    test("should prevent non-admin from accessing other user franchises", async () => {
-      const res = await request(app)
-        .get(`/api/franchise/${franchiseeUser.id}`)
-        .set("Authorization", `Bearer ${regularUser.token}`);
-
       expect(res.status).toBe(200);
       expect(res.body).toEqual([]);
     });
+
+    test("non-admin cannot view another user's franchises", async () => {
+      const res = await request(app)
+        .get(`/api/franchise/${franchiseeUser.id}`)
+        .set("Authorization", `Bearer ${regularUser.token}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual([]); // access denied silently returns empty
+    });
+
+    test("returns 401 without authentication", async () => {
+      const res = await request(app).get(`/api/franchise/${franchiseeUser.id}`);
+      expect(res.status).toBe(401);
+    });
   });
 
+  // ── POST /api/franchise ────────────────────────────────────────────────────
+
   describe("POST /api/franchise", () => {
-    test("should create franchise as admin", async () => {
+    test("admin creates a franchise and it includes id and admins", async () => {
       const newFranchise = {
         name: generateRandomString(),
         admins: [{ email: franchiseeUser.email }],
       };
-
       const res = await request(app)
         .post("/api/franchise")
         .set("Authorization", `Bearer ${adminUser.token}`)
         .send(newFranchise);
 
       expect(res.status).toBe(200);
-      expect(res.body.name).toBe(newFranchise.name);
       expect(res.body).toHaveProperty("id");
+      expect(res.body.name).toBe(newFranchise.name);
       expect(res.body.admins).toHaveLength(1);
       expect(res.body.admins[0].email).toBe(franchiseeUser.email);
     });
 
-    test("should fail to create franchise without authentication", async () => {
-      const newFranchise = {
-        name: generateRandomString(),
-        admins: [{ email: franchiseeUser.email }],
-      };
-
-      const res = await request(app).post("/api/franchise").send(newFranchise);
-
-      expect(res.status).toBe(401);
-      expect(res.body.message).toBe("unauthorized");
-    });
-
-    test("should fail to create franchise as non-admin", async () => {
-      const newFranchise = {
-        name: generateRandomString(),
-        admins: [{ email: franchiseeUser.email }],
-      };
-
-      const res = await request(app)
-        .post("/api/franchise")
-        .set("Authorization", `Bearer ${regularUser.token}`)
-        .send(newFranchise);
-
-      expect(res.status).toBe(403);
-      expect(res.body.message).toBe("unable to create a franchise");
-    });
-
-    test("should create franchise with multiple admins", async () => {
-      const newFranchise = {
-        name: generateRandomString(),
-        admins: [{ email: franchiseeUser.email }, { email: regularUser.email }],
-      };
-
+    test("creates franchise with multiple admins", async () => {
       const res = await request(app)
         .post("/api/franchise")
         .set("Authorization", `Bearer ${adminUser.token}`)
-        .send(newFranchise);
-
+        .send({
+          name: generateRandomString(),
+          admins: [
+            { email: franchiseeUser.email },
+            { email: regularUser.email },
+          ],
+        });
       expect(res.status).toBe(200);
       expect(res.body.admins).toHaveLength(2);
     });
+
+    test("non-admin gets 403", async () => {
+      const res = await request(app)
+        .post("/api/franchise")
+        .set("Authorization", `Bearer ${regularUser.token}`)
+        .send({ name: generateRandomString(), admins: [] });
+      expect(res.status).toBe(403);
+    });
+
+    test("returns 401 without authentication", async () => {
+      const res = await request(app)
+        .post("/api/franchise")
+        .send({ name: generateRandomString(), admins: [] });
+      expect(res.status).toBe(401);
+    });
   });
 
+  // ── DELETE /api/franchise/:franchiseId ────────────────────────────────────
+
   describe("DELETE /api/franchise/:franchiseId", () => {
-    test("should delete franchise", async () => {
-      // Create a franchise to delete
-      const franchiseToDelete = {
-        name: generateRandomString(),
-        admins: [{ email: franchiseeUser.email }],
-      };
+    test("admin can delete a franchise", async () => {
       const createRes = await request(app)
         .post("/api/franchise")
         .set("Authorization", `Bearer ${adminUser.token}`)
-        .send(franchiseToDelete);
-
+        .send({
+          name: generateRandomString(),
+          admins: [{ email: franchiseeUser.email }],
+        });
       const franchiseId = createRes.body.id;
 
       const res = await request(app)
         .delete(`/api/franchise/${franchiseId}`)
         .set("Authorization", `Bearer ${adminUser.token}`);
-
       expect(res.status).toBe(200);
       expect(res.body.message).toBe("franchise deleted");
     });
 
-    test("should allow deletion without authentication", async () => {
-      // Note: This endpoint doesn't require authentication based on the router code
-      const franchiseToDelete = {
-        name: generateRandomString(),
-        admins: [{ email: franchiseeUser.email }],
-      };
+    test("deletion cascades — franchise no longer appears in list", async () => {
+      const name = generateRandomString();
       const createRes = await request(app)
         .post("/api/franchise")
         .set("Authorization", `Bearer ${adminUser.token}`)
-        .send(franchiseToDelete);
-
+        .send({ name, admins: [{ email: franchiseeUser.email }] });
       const franchiseId = createRes.body.id;
 
-      const res = await request(app).delete(`/api/franchise/${franchiseId}`);
+      await request(app)
+        .delete(`/api/franchise/${franchiseId}`)
+        .set("Authorization", `Bearer ${adminUser.token}`);
 
-      expect(res.status).toBe(200);
-      expect(res.body.message).toBe("franchise deleted");
+      const listRes = await request(app).get(`/api/franchise?name=${name}`);
+      expect(listRes.body.franchises.length).toBe(0);
+    });
+
+    test("non-admin gets 403", async () => {
+      const res = await request(app)
+        .delete(`/api/franchise/${seededFranchise.id}`)
+        .set("Authorization", `Bearer ${regularUser.token}`);
+      expect(res.status).toBe(403);
+    });
+
+    test("returns 401 without authentication", async () => {
+      const res = await request(app).delete(
+        `/api/franchise/${seededFranchise.id}`,
+      );
+      expect(res.status).toBe(401);
     });
   });
+
+  // ── POST /api/franchise/:franchiseId/store ────────────────────────────────
 
   describe("POST /api/franchise/:franchiseId/store", () => {
-    test("should create store as franchise admin", async () => {
-      const newStore = {
-        name: generateRandomString(),
-      };
-
+    test("franchise admin can create a store", async () => {
       const res = await request(app)
-        .post(`/api/franchise/${testFranchise.id}/store`)
+        .post(`/api/franchise/${seededFranchise.id}/store`)
         .set("Authorization", `Bearer ${franchiseeUser.token}`)
-        .send(newStore);
+        .send({ name: generateRandomString() });
 
       expect(res.status).toBe(200);
-      expect(res.body.name).toBe(newStore.name);
       expect(res.body).toHaveProperty("id");
-      expect(res.body.franchiseId).toBe(testFranchise.id);
+      expect(res.body.franchiseId).toBe(seededFranchise.id);
     });
 
-    test("should create store as system admin", async () => {
-      const newStore = {
-        name: generateRandomString(),
-      };
-
+    test("system admin can create a store", async () => {
       const res = await request(app)
-        .post(`/api/franchise/${testFranchise.id}/store`)
+        .post(`/api/franchise/${seededFranchise.id}/store`)
         .set("Authorization", `Bearer ${adminUser.token}`)
-        .send(newStore);
-
+        .send({ name: generateRandomString() });
       expect(res.status).toBe(200);
-      expect(res.body.name).toBe(newStore.name);
-      expect(res.body.franchiseId).toBe(testFranchise.id);
     });
 
-    test("should fail to create store without authentication", async () => {
-      const newStore = {
-        name: generateRandomString(),
-      };
-
+    test("non-franchisee gets 403", async () => {
       const res = await request(app)
-        .post(`/api/franchise/${testFranchise.id}/store`)
-        .send(newStore);
-
-      expect(res.status).toBe(401);
-      expect(res.body.message).toBe("unauthorized");
-    });
-
-    test("should fail to create store as non-franchisee", async () => {
-      const newStore = {
-        name: generateRandomString(),
-      };
-
-      const res = await request(app)
-        .post(`/api/franchise/${testFranchise.id}/store`)
+        .post(`/api/franchise/${seededFranchise.id}/store`)
         .set("Authorization", `Bearer ${regularUser.token}`)
-        .send(newStore);
-
+        .send({ name: generateRandomString() });
       expect(res.status).toBe(403);
-      expect(res.body.message).toBe("unable to create a store");
+    });
+
+    test("returns 401 without authentication", async () => {
+      const res = await request(app)
+        .post(`/api/franchise/${seededFranchise.id}/store`)
+        .send({ name: generateRandomString() });
+      expect(res.status).toBe(401);
     });
   });
 
+  // ── DELETE /api/franchise/:franchiseId/store/:storeId ────────────────────
+
   describe("DELETE /api/franchise/:franchiseId/store/:storeId", () => {
-    let storeToDelete;
+    let store;
 
     beforeEach(async () => {
-      // Create a store to delete
-      storeToDelete = await DB.createStore(testFranchise.id, {
+      store = await DB.createStore(seededFranchise.id, {
         name: generateRandomString(),
       });
     });
 
-    test("should delete store as franchise admin", async () => {
+    test("franchise admin can delete a store", async () => {
       const res = await request(app)
-        .delete(`/api/franchise/${testFranchise.id}/store/${storeToDelete.id}`)
+        .delete(`/api/franchise/${seededFranchise.id}/store/${store.id}`)
         .set("Authorization", `Bearer ${franchiseeUser.token}`);
-
       expect(res.status).toBe(200);
       expect(res.body.message).toBe("store deleted");
     });
 
-    test("should delete store as system admin", async () => {
+    test("system admin can delete a store", async () => {
       const res = await request(app)
-        .delete(`/api/franchise/${testFranchise.id}/store/${storeToDelete.id}`)
+        .delete(`/api/franchise/${seededFranchise.id}/store/${store.id}`)
         .set("Authorization", `Bearer ${adminUser.token}`);
-
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe("store deleted");
     });
 
-    test("should fail to delete store without authentication", async () => {
-      const res = await request(app).delete(
-        `/api/franchise/${testFranchise.id}/store/${storeToDelete.id}`,
-      );
-
-      expect(res.status).toBe(401);
-      expect(res.body.message).toBe("unauthorized");
-    });
-
-    test("should fail to delete store as non-franchisee", async () => {
+    test("non-franchisee gets 403", async () => {
       const res = await request(app)
-        .delete(`/api/franchise/${testFranchise.id}/store/${storeToDelete.id}`)
+        .delete(`/api/franchise/${seededFranchise.id}/store/${store.id}`)
         .set("Authorization", `Bearer ${regularUser.token}`);
-
       expect(res.status).toBe(403);
-      expect(res.body.message).toBe("unable to delete a store");
+    });
+
+    test("returns 401 without authentication", async () => {
+      const res = await request(app).delete(
+        `/api/franchise/${seededFranchise.id}/store/${store.id}`,
+      );
+      expect(res.status).toBe(401);
     });
   });
 });

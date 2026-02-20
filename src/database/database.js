@@ -74,6 +74,11 @@ class DB {
         }
       }
       return { ...user, id: userId, password: undefined };
+    } catch (err) {
+      if (err.code === "ER_DUP_ENTRY") {
+        throw new StatusCodeError("user with that email already exists", 409);
+      }
+      throw err;
     } finally {
       connection.end();
     }
