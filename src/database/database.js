@@ -309,6 +309,30 @@ class DB {
     }
   }
 
+  // Deletes a user and all their associated data (auth tokens, roles).
+  // Wrapped in a transaction so a partial failure leaves the DB consistent.
+  async deleteUser(userId) {
+    const connection = await this.getConnection();
+    try {
+      await connection.beginTransaction();
+      try {
+        await this.query(connection, `DELETE FROM auth WHERE userId=?`, [
+          userId,
+        ]);
+        await this.query(connection, `DELETE FROM userRole WHERE userId=?`, [
+          userId,
+        ]);
+        await this.query(connection, `DELETE FROM user WHERE id=?`, [userId]);
+        await connection.commit();
+      } catch {
+        await connection.rollback();
+        throw new StatusCodeError("unable to delete user", 500);
+      }
+    } finally {
+      connection.end();
+    }
+  }
+
   // Retrieves paginated list of franchises with optional name filtering
   // Admin users receive full franchise details including revenue, others get basic info
   async getFranchises(authUser, page = 0, limit = 10, nameFilter = "*") {

@@ -223,13 +223,60 @@ describe("User Router", () => {
   });
 
   describe("DELETE /api/user/:userId", () => {
-    test("should return not implemented", async () => {
+    test("should allow a user to delete their own account", async () => {
+      // Create a throwaway user so we don't disturb regularUser for later tests
+      const target = await createUserWithRole(app, Role.Diner);
       const res = await request(app)
-        .delete(`/api/user/${regularUser.id}`)
-        .set("Authorization", `Bearer ${regularUser.token}`);
+        .delete(`/api/user/${target.id}`)
+        .set("Authorization", `Bearer ${target.token}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe("not implemented");
+      expect(res.body.message).toBe("user deleted");
+    });
+
+    test("deleted user can no longer log in", async () => {
+      const target = await createUserWithRole(app, Role.Diner);
+      await request(app)
+        .delete(`/api/user/${target.id}`)
+        .set("Authorization", `Bearer ${target.token}`);
+
+      const loginRes = await request(app).put("/api/auth").send({
+        email: target.email,
+        password: target.password,
+      });
+      expect(loginRes.status).toBe(404); // unknown user
+    });
+
+    test("deleted user's token is no longer accepted", async () => {
+      const target = await createUserWithRole(app, Role.Diner);
+      const oldToken = target.token;
+      await request(app)
+        .delete(`/api/user/${target.id}`)
+        .set("Authorization", `Bearer ${oldToken}`);
+
+      const meRes = await request(app)
+        .get("/api/user/me")
+        .set("Authorization", `Bearer ${oldToken}`);
+      expect(meRes.status).toBe(401);
+    });
+
+    test("should allow an admin to delete another user", async () => {
+      const target = await createUserWithRole(app, Role.Diner);
+      const res = await request(app)
+        .delete(`/api/user/${target.id}`)
+        .set("Authorization", `Bearer ${adminUser.token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("user deleted");
+    });
+
+    test("should prevent a non-admin from deleting another user", async () => {
+      const res = await request(app)
+        .delete(`/api/user/${otherUser.id}`)
+        .set("Authorization", `Bearer ${regularUser.token}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.message).toBe("unauthorized");
     });
 
     test("should require authentication", async () => {
@@ -241,18 +288,15 @@ describe("User Router", () => {
   });
 
   describe("GET /api/user", () => {
-    test("should return not implemented", async () => {
+    test("should return a list of users", async () => {
       const res = await request(app)
         .get("/api/user")
         .set("Authorization", `Bearer ${adminUser.token}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe("not implemented");
       expect(res.body).toHaveProperty("users");
-      expect(res.body).toHaveProperty("more");
       expect(Array.isArray(res.body.users)).toBe(true);
-      expect(res.body.users).toEqual([]);
-      expect(res.body.more).toBe(false);
+      expect(res.body.users.length).toBeGreaterThan(0);
     });
 
     test("should require authentication", async () => {
@@ -268,7 +312,7 @@ describe("User Router", () => {
         .set("Authorization", `Bearer ${regularUser.token}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.message).toBe("not implemented");
+      expect(res.body).toHaveProperty("users");
     });
   });
 });
