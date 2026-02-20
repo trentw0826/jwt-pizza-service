@@ -1,5 +1,6 @@
 const request = require("supertest");
 const { Role, DB } = require("../src/database/database.js");
+const { fixtures, seedTestDatabase } = require("./testFixtures");
 
 function generateRandomString(length = 10) {
   const chars =
@@ -85,4 +86,7 @@ module.exports = {
   createTestFranchise,
   createTestStore,
   createTestMenuItem,
+  // Fixture constants and seeding — importable so tests know exactly what's in the DB
+  fixtures,
+  seedTestDatabase,
 };

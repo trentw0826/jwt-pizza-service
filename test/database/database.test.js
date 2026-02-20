@@ -264,3 +264,109 @@ describe("Database Tests", () => {
     });
   });
 });
+
+const { fixtures, seedTestDatabase } = require("../testHelper.js");
+
+describe("Seed Data Verification", () => {
+  let seeded;
+
+  beforeAll(async () => {
+    // Re-seed so this block has direct access to all returned records
+    seeded = await seedTestDatabase();
+  });
+
+  describe("Users", () => {
+    test("seeds exactly 52 users (1 admin + 1 diner + 50 bulk)", () => {
+      // seeded.users contains only the 50 bulk users; admin and diner are separate
+      expect(seeded.users.length).toBe(fixtures.users.length); // 50 bulk
+      // Named fixtures are always seeded alongside them
+      expect(seeded.admin.id).toBeDefined();
+      expect(seeded.diner.id).toBeDefined();
+    });
+
+    test("bulk users have predictable email and name patterns", () => {
+      fixtures.users.forEach((user, i) => {
+        expect(user.email).toBe(`user${i + 1}@test.com`);
+        expect(user.name).toBe(`Bulk User ${i + 1}`);
+        expect(user.password).toBe(`pass-${i + 1}`);
+      });
+    });
+
+    test("seeded bulk user records all have database ids", () => {
+      expect(seeded.users.length).toBe(fixtures.users.length);
+      seeded.users.forEach((user) => expect(user.id).toBeDefined());
+    });
+  });
+
+  describe("Menu Items", () => {
+    test("seeds exactly 10 menu items", async () => {
+      const menu = await DB.getMenu();
+      expect(menu.length).toBe(fixtures.menuItems.length);
+    });
+
+    test("seeded menu item titles match fixture definitions", async () => {
+      const menu = await DB.getMenu();
+      const seededTitles = menu.map((m) => m.title).sort();
+      const fixtureTitles = fixtures.menuItems.map((m) => m.title).sort();
+      expect(seededTitles).toEqual(fixtureTitles);
+    });
+
+    test("all menu items have positive prices", async () => {
+      const menu = await DB.getMenu();
+      menu.forEach((item) => expect(item.price).toBeGreaterThan(0));
+    });
+  });
+
+  describe("Franchises and Stores", () => {
+    test("seeds exactly 10 franchises", async () => {
+      const [franchises] = await DB.getFranchises(null, 0, 100, "*");
+      expect(franchises.length).toBe(fixtures.franchises.length);
+    });
+
+    test("seeded franchise names match fixture definitions", async () => {
+      const [franchises] = await DB.getFranchises(null, 0, 100, "*");
+      const seededNames = franchises.map((f) => f.name).sort();
+      const fixtureNames = fixtures.franchises.map((f) => f.name).sort();
+      expect(seededNames).toEqual(fixtureNames);
+    });
+
+    test("each franchise has exactly 3 stores", () => {
+      seeded.franchises.forEach((franchise) => {
+        expect(franchise.stores.length).toBe(3);
+      });
+    });
+
+    test("all stores have database ids and belong to their franchise", () => {
+      seeded.franchises.forEach((franchise) => {
+        franchise.stores.forEach((store) => {
+          expect(store.id).toBeDefined();
+          expect(store.franchiseId).toBe(franchise.id);
+        });
+      });
+    });
+  });
+
+  describe("Orders", () => {
+    test("seeds exactly 50 orders (one per bulk user)", () => {
+      expect(seeded.orders.length).toBe(fixtures.users.length);
+    });
+
+    test("all orders have database ids", () => {
+      seeded.orders.forEach((order) => expect(order.id).toBeDefined());
+    });
+
+    test("orders are distributed across franchises", () => {
+      const franchiseIds = new Set(seeded.orders.map((o) => o.franchiseId));
+      // Orders should span more than one franchise
+      expect(franchiseIds.size).toBeGreaterThan(1);
+    });
+
+    test("each bulk user has an order in the database", async () => {
+      // Spot-check first, middle, and last bulk users
+      for (const idx of [0, 24, 49]) {
+        const { orders } = await DB.getOrders(seeded.users[idx], 1);
+        expect(orders.length).toBeGreaterThan(0);
+      }
+    });
+  });
+});
