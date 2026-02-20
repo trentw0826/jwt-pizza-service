@@ -2,6 +2,10 @@ const { DB } = require("../../src/database/database.js");
 const { Role } = require("../../src/model/model.js");
 const { generateRandomString } = require("../testHelper.js");
 
+// Seed data includes 52 bcrypt-hashed users (~100ms each).
+// Raise the timeout so the beforeAll seeding phase doesn't show up as a test failure.
+jest.setTimeout(30_000);
+
 describe("Database Tests", () => {
   let testUser;
   let testFranchise;
@@ -96,6 +100,60 @@ describe("Database Tests", () => {
       );
       expect(updatedUser.name).toBe(newName);
       expect(updatedUser.email).toBe(newEmail);
+    });
+
+    test("should return the requested page size", async () => {
+      const users = await DB.getUsers("*", 1, 10);
+      expect(users.length).toBe(10);
+    });
+
+    test("page 1 and page 2 contain different users", async () => {
+      const page1 = await DB.getUsers("*", 1, 10);
+      const page2 = await DB.getUsers("*", 2, 10);
+      const page1Ids = page1.map((u) => u.id);
+      const page2Ids = page2.map((u) => u.id);
+      // No id should appear on both pages
+      expect(page1Ids.some((id) => page2Ids.includes(id))).toBe(false);
+    });
+
+    test("pages advance by the correct offset (ids are stable and ascending)", async () => {
+      const page1 = await DB.getUsers("*", 1, 5);
+      const page2 = await DB.getUsers("*", 2, 5);
+      // Every id on page 2 should be greater than every id on page 1
+      const maxPage1Id = Math.max(...page1.map((u) => u.id));
+      const minPage2Id = Math.min(...page2.map((u) => u.id));
+      expect(minPage2Id).toBeGreaterThan(maxPage1Id);
+    });
+
+    test("last page returns fewer results than the page size", async () => {
+      // 52 total users with page size 10 → page 6 has 2 users
+      const lastPage = await DB.getUsers("*", 6, 10);
+      expect(lastPage.length).toBeGreaterThan(0);
+      expect(lastPage.length).toBeLessThan(10);
+    });
+
+    test("name filter returns only matching users", async () => {
+      // All 50 bulk users have 'Bulk User' in their name
+      const page1 = await DB.getUsers("Bulk User", 1, 50);
+      expect(page1.length).toBe(50);
+      page1.forEach((u) => expect(u.name).toMatch(/Bulk User/));
+    });
+
+    test("name filter is a substring match", async () => {
+      // 'User 1' matches 'Bulk User 1', 'Bulk User 10', 'Bulk User 11' … 'Bulk User 19'
+      const users = await DB.getUsers("User 1", 1, 50);
+      expect(users.length).toBeGreaterThan(1); // more than just 'Bulk User 1'
+      users.forEach((u) => expect(u.name).toMatch(/User 1/));
+    });
+
+    test("name filter with no match returns empty array", async () => {
+      const users = await DB.getUsers("zzz_no_match_zzz", 1, 10);
+      expect(users.length).toBe(0);
+    });
+
+    test("returned user objects do not expose password hashes", async () => {
+      const users = await DB.getUsers("*", 1, 10);
+      users.forEach((u) => expect(u).not.toHaveProperty("password"));
     });
   });
 

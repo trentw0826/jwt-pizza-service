@@ -112,6 +112,23 @@ class DB {
     }
   }
 
+  async getUsers(name = "*", page = 1, perPageLimit = 10) {
+    const connection = await this.getConnection();
+    try {
+      const offset = this.getOffset(page, perPageLimit);
+      // Translate * glob wildcard to SQL LIKE wildcard (matches getFranchises pattern)
+      const nameFilter = name.replace(/\*/g, "%");
+      const users = await this.query(
+        connection,
+        `SELECT id, name, email FROM user WHERE name LIKE ? LIMIT ${offset},${perPageLimit}`,
+        [`%${nameFilter}%`],
+      );
+      return users;
+    } finally {
+      connection.end();
+    }
+  }
+
   async updateUser(userId, name, email, password) {
     const connection = await this.getConnection();
     try {
