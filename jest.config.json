@@ -1,6 +1,9 @@
 {
   "collectCoverage": true,
   "coverageReporters": ["json-summary", "text"],
+  "globalSetup": "./test/jestGlobalSetup.js",
+  "globalTeardown": "./test/jestGlobalTeardown.js",
+  "setupFilesAfterFramework": ["./test/testSetup.js"],
   "coverageThreshold": {
     "global": {
       "lines": 80
