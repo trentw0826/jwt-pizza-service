@@ -1,8 +1,12 @@
-const { DB } = require('../../src/database/database.js');
-const { Role } = require('../../src/model/model.js');
-const { generateRandomString } = require('../testHelper.js');
+const { DB } = require("../../src/database/database.js");
+const { Role } = require("../../src/model/model.js");
+const { generateRandomString } = require("../testHelper.js");
 
-describe('Database Tests', () => {
+// Seed data includes 52 bcrypt-hashed users (~100ms each).
+// Raise the timeout so the beforeAll seeding phase doesn't show up as a test failure.
+jest.setTimeout(30_000);
+
+describe("Database Tests", () => {
   let testUser;
   let testFranchise;
   let testStore;
@@ -18,7 +22,7 @@ describe('Database Tests', () => {
     testUser = {
       name: generateRandomString(),
       email: `${generateRandomString()}@test.com`,
-      password: 'password123',
+      password: "password123",
       roles: [{ role: Role.Diner }],
     };
 
@@ -33,27 +37,27 @@ describe('Database Tests', () => {
 
     testMenuItem = {
       title: generateRandomString(),
-      description: 'Test pizza',
-      image: 'pizza.png',
+      description: "Test pizza",
+      image: "pizza.png",
       price: 0.0042,
     };
   });
 
-  describe('Menu Operations', () => {
-    test('should get menu items', async () => {
+  describe("Menu Operations", () => {
+    test("should get menu items", async () => {
       const menu = await DB.getMenu();
       expect(Array.isArray(menu)).toBe(true);
     });
 
-    test('should add a menu item', async () => {
+    test("should add a menu item", async () => {
       const addedItem = await DB.addMenuItem(testMenuItem);
       expect(addedItem).toMatchObject(testMenuItem);
       expect(addedItem.id).toBeDefined();
     });
   });
 
-  describe('User Operations', () => {
-    test('should add a new user', async () => {
+  describe("User Operations", () => {
+    test("should add a new user", async () => {
       const user = await DB.addUser(testUser);
       expect(user.name).toBe(testUser.name);
       expect(user.email).toBe(testUser.email);
@@ -61,7 +65,7 @@ describe('Database Tests', () => {
       expect(user.id).toBeDefined();
     });
 
-    test('should get user by email', async () => {
+    test("should get user by email", async () => {
       const addedUser = await DB.addUser(testUser);
       const retrievedUser = await DB.getUser(testUser.email, testUser.password);
       expect(retrievedUser.id).toBe(addedUser.id);
@@ -69,95 +73,160 @@ describe('Database Tests', () => {
       expect(retrievedUser.password).toBeUndefined();
     });
 
-    test('should fail to get user with wrong password', async () => {
+    test("should fail to get user with wrong password", async () => {
       await DB.addUser(testUser);
-      await expect(DB.getUser(testUser.email, 'wrongpassword')).rejects.toThrow('unknown user');
+      await expect(DB.getUser(testUser.email, "wrongpassword")).rejects.toThrow(
+        "unknown user",
+      );
     });
 
-    test('should fail to get non-existent user', async () => {
-      await expect(DB.getUser('nonexistent@test.com', 'password')).rejects.toThrow('unknown user');
+    test("should fail to get non-existent user", async () => {
+      await expect(
+        DB.getUser("nonexistent@test.com", "password"),
+      ).rejects.toThrow("unknown user");
     });
 
-    test('should update user information', async () => {
+    test("should update user information", async () => {
       const addedUser = await DB.addUser(testUser);
       const newName = generateRandomString();
       const newEmail = `${generateRandomString()}@test.com`;
-      const newPassword = 'newpassword456';
-      
-      const updatedUser = await DB.updateUser(addedUser.id, newName, newEmail, newPassword);
+      const newPassword = "newpassword456";
+
+      const updatedUser = await DB.updateUser(
+        addedUser.id,
+        newName,
+        newEmail,
+        newPassword,
+      );
       expect(updatedUser.name).toBe(newName);
       expect(updatedUser.email).toBe(newEmail);
     });
+
+    test("should return the requested page size", async () => {
+      const users = await DB.getUsers("*", 1, 10);
+      expect(users.length).toBe(10);
+    });
+
+    test("page 1 and page 2 contain different users", async () => {
+      const page1 = await DB.getUsers("*", 1, 10);
+      const page2 = await DB.getUsers("*", 2, 10);
+      const page1Ids = page1.map((u) => u.id);
+      const page2Ids = page2.map((u) => u.id);
+      // No id should appear on both pages
+      expect(page1Ids.some((id) => page2Ids.includes(id))).toBe(false);
+    });
+
+    test("pages advance by the correct offset (ids are stable and ascending)", async () => {
+      const page1 = await DB.getUsers("*", 1, 5);
+      const page2 = await DB.getUsers("*", 2, 5);
+      // Every id on page 2 should be greater than every id on page 1
+      const maxPage1Id = Math.max(...page1.map((u) => u.id));
+      const minPage2Id = Math.min(...page2.map((u) => u.id));
+      expect(minPage2Id).toBeGreaterThan(maxPage1Id);
+    });
+
+    test("last page returns fewer results than the page size", async () => {
+      // 52 total users with page size 10 → page 6 has 2 users
+      const lastPage = await DB.getUsers("*", 6, 10);
+      expect(lastPage.length).toBeGreaterThan(0);
+      expect(lastPage.length).toBeLessThan(10);
+    });
+
+    test("name filter returns only matching users", async () => {
+      // All 50 bulk users have 'Bulk User' in their name
+      const page1 = await DB.getUsers("Bulk User", 1, 50);
+      expect(page1.length).toBe(50);
+      page1.forEach((u) => expect(u.name).toMatch(/Bulk User/));
+    });
+
+    test("name filter is a substring match", async () => {
+      // 'User 1' matches 'Bulk User 1', 'Bulk User 10', 'Bulk User 11' … 'Bulk User 19'
+      const users = await DB.getUsers("User 1", 1, 50);
+      expect(users.length).toBeGreaterThan(1); // more than just 'Bulk User 1'
+      users.forEach((u) => expect(u.name).toMatch(/User 1/));
+    });
+
+    test("name filter with no match returns empty array", async () => {
+      const users = await DB.getUsers("zzz_no_match_zzz", 1, 10);
+      expect(users.length).toBe(0);
+    });
+
+    test("returned user objects do not expose password hashes", async () => {
+      const users = await DB.getUsers("*", 1, 10);
+      users.forEach((u) => expect(u).not.toHaveProperty("password"));
+    });
   });
 
-  describe('Authentication Operations', () => {
-    test('should login and logout user', async () => {
+  describe("Authentication Operations", () => {
+    test("should login and logout user", async () => {
       const user = await DB.addUser(testUser);
-      const token = 'header.payload.testSignature123';
-      
+      const token = "header.payload.testSignature123";
+
       await DB.loginUser(user.id, token);
       const isLoggedIn = await DB.isLoggedIn(token);
       expect(isLoggedIn).toBe(true);
-      
+
       await DB.logoutUser(token);
       const isStillLoggedIn = await DB.isLoggedIn(token);
       expect(isStillLoggedIn).toBe(false);
     });
 
-    test('should check if token is not logged in', async () => {
-      const token = 'header.payload.nonExistentToken';
+    test("should check if token is not logged in", async () => {
+      const token = "header.payload.nonExistentToken";
       const isLoggedIn = await DB.isLoggedIn(token);
       expect(isLoggedIn).toBe(false);
     });
   });
 
-  describe('Franchise Operations', () => {
-    test('should create a franchise', async () => {
+  describe("Franchise Operations", () => {
+    test("should create a franchise", async () => {
       const admin = await DB.addUser(testUser);
       testFranchise.admins = [{ email: admin.email }];
-      
+
       const franchise = await DB.createFranchise(testFranchise);
       expect(franchise.name).toBe(testFranchise.name);
       expect(franchise.id).toBeDefined();
       expect(franchise.admins[0].id).toBe(admin.id);
     });
 
-    test('should fail to create franchise with non-existent admin', async () => {
-      testFranchise.admins = [{ email: 'nonexistent@test.com' }];
-      await expect(DB.createFranchise(testFranchise)).rejects.toThrow('unknown user');
+    test("should fail to create franchise with non-existent admin", async () => {
+      testFranchise.admins = [{ email: "nonexistent@test.com" }];
+      await expect(DB.createFranchise(testFranchise)).rejects.toThrow(
+        "unknown user",
+      );
     });
 
-    test('should get franchises', async () => {
+    test("should get franchises", async () => {
       const admin = await DB.addUser(testUser);
       testFranchise.admins = [{ email: admin.email }];
       await DB.createFranchise(testFranchise);
-      
-      const [franchises, hasMore] = await DB.getFranchises(null, 0, 10, '*');
+
+      const [franchises, hasMore] = await DB.getFranchises(null, 0, 10, "*");
       expect(Array.isArray(franchises)).toBe(true);
       expect(franchises.length).toBeGreaterThan(0);
-      expect(typeof hasMore).toBe('boolean');
+      expect(typeof hasMore).toBe("boolean");
     });
 
-    test('should get user franchises', async () => {
+    test("should get user franchises", async () => {
       const admin = await DB.addUser(testUser);
       testFranchise.admins = [{ email: admin.email }];
       await DB.createFranchise(testFranchise);
-      
+
       const franchises = await DB.getUserFranchises(admin.id);
       expect(Array.isArray(franchises)).toBe(true);
       expect(franchises.length).toBeGreaterThan(0);
     });
 
-    test('should delete a franchise', async () => {
+    test("should delete a franchise", async () => {
       const admin = await DB.addUser(testUser);
       testFranchise.admins = [{ email: admin.email }];
       const franchise = await DB.createFranchise(testFranchise);
-      
+
       await expect(DB.deleteFranchise(franchise.id)).resolves.not.toThrow();
     });
   });
 
-  describe('Store Operations', () => {
+  describe("Store Operations", () => {
     let franchiseId;
 
     beforeEach(async () => {
@@ -167,20 +236,22 @@ describe('Database Tests', () => {
       franchiseId = franchise.id;
     });
 
-    test('should create a store', async () => {
+    test("should create a store", async () => {
       const store = await DB.createStore(franchiseId, testStore);
       expect(store.name).toBe(testStore.name);
       expect(store.id).toBeDefined();
       expect(store.franchiseId).toBe(franchiseId);
     });
 
-    test('should delete a store', async () => {
+    test("should delete a store", async () => {
       const store = await DB.createStore(franchiseId, testStore);
-      await expect(DB.deleteStore(franchiseId, store.id)).resolves.not.toThrow();
+      await expect(
+        DB.deleteStore(franchiseId, store.id),
+      ).resolves.not.toThrow();
     });
   });
 
-  describe('Order Operations', () => {
+  describe("Order Operations", () => {
     let user;
     let franchiseId;
     let storeId;
@@ -189,27 +260,27 @@ describe('Database Tests', () => {
     beforeEach(async () => {
       // Create user
       user = await DB.addUser(testUser);
-      
+
       // Create franchise and store
       const admin = await DB.addUser({
         name: generateRandomString(),
         email: `${generateRandomString()}@test.com`,
-        password: 'password',
+        password: "password",
         roles: [{ role: Role.Diner }],
       });
       testFranchise.admins = [{ email: admin.email }];
       const franchise = await DB.createFranchise(testFranchise);
       franchiseId = franchise.id;
-      
+
       const store = await DB.createStore(franchiseId, testStore);
       storeId = store.id;
-      
+
       // Add menu item
       const menuItem = await DB.addMenuItem(testMenuItem);
       menuItemId = menuItem.id;
     });
 
-    test('should add a diner order', async () => {
+    test("should add a diner order", async () => {
       const order = {
         franchiseId,
         storeId,
@@ -221,14 +292,14 @@ describe('Database Tests', () => {
           },
         ],
       };
-      
+
       const addedOrder = await DB.addDinerOrder(user, order);
       expect(addedOrder.id).toBeDefined();
       expect(addedOrder.franchiseId).toBe(franchiseId);
       expect(addedOrder.storeId).toBe(storeId);
     });
 
-    test('should get orders for a user', async () => {
+    test("should get orders for a user", async () => {
       const order = {
         franchiseId,
         storeId,
@@ -240,14 +311,207 @@ describe('Database Tests', () => {
           },
         ],
       };
-      
+
       await DB.addDinerOrder(user, order);
       const orders = await DB.getOrders(user, 1);
-      
+
       expect(orders.dinerId).toBe(user.id);
       expect(Array.isArray(orders.orders)).toBe(true);
       expect(orders.orders.length).toBeGreaterThan(0);
       expect(orders.page).toBe(1);
+    });
+  });
+});
+
+// =============================================================================
+// Additional DB Layer Coverage
+// =============================================================================
+
+describe("DB.deleteUser", () => {
+  test("user no longer exists in the DB after deletion", async () => {
+    const user = await DB.addUser({
+      name: "Delete Test",
+      email: `del-${Date.now()}@test.com`,
+      password: "pass",
+      roles: [{ role: Role.Diner }],
+    });
+
+    await DB.deleteUser(user.id);
+    await expect(DB.getUser(user.email, "pass")).rejects.toThrow(
+      "unknown user",
+    );
+  });
+
+  test("auth tokens are cleared on deletion", async () => {
+    const user = await DB.addUser({
+      name: "Token Delete",
+      email: `tokdel-${Date.now()}@test.com`,
+      password: "pass",
+      roles: [{ role: Role.Diner }],
+    });
+    const token = "del.token.test";
+    await DB.loginUser(user.id, token);
+    expect(await DB.isLoggedIn(token)).toBe(true);
+
+    await DB.deleteUser(user.id);
+    expect(await DB.isLoggedIn(token)).toBe(false);
+  });
+});
+
+describe("DB.updateUser — partial field updates", () => {
+  test("name-only update does not change email", async () => {
+    const original = await DB.addUser({
+      name: "Partial Update",
+      email: `partial-${Date.now()}@test.com`,
+      password: "pass",
+      roles: [{ role: Role.Diner }],
+    });
+
+    const updated = await DB.updateUser(
+      original.id,
+      "New Name",
+      original.email,
+      original.password,
+    );
+    expect(updated.name).toBe("New Name");
+    expect(updated.email).toBe(original.email);
+  });
+
+  test("email-only update does not change name", async () => {
+    const original = await DB.addUser({
+      name: "Email Only",
+      email: `emailonly-${Date.now()}@test.com`,
+      password: "pass",
+      roles: [{ role: Role.Diner }],
+    });
+    const newEmail = `new-${Date.now()}@test.com`;
+
+    const updated = await DB.updateUser(
+      original.id,
+      original.name,
+      newEmail,
+      original.password,
+    );
+    expect(updated.name).toBe(original.name);
+    expect(updated.email).toBe(newEmail);
+  });
+});
+
+describe("DB.addUser — duplicate email", () => {
+  test("adding a user with an existing email throws", async () => {
+    const userData = {
+      name: "Dup Email",
+      email: `dup-${Date.now()}@test.com`,
+      password: "pass",
+      roles: [{ role: Role.Diner }],
+    };
+    await DB.addUser(userData);
+    await expect(DB.addUser(userData)).rejects.toThrow();
+  });
+});
+
+const { fixtures, seedTestDatabase } = require("../testHelper.js");
+
+describe("Seed Data Verification", () => {
+  let seeded;
+
+  beforeAll(async () => {
+    // Re-seed so this block has direct access to all returned records
+    seeded = await seedTestDatabase();
+  });
+
+  describe("Users", () => {
+    test("seeds exactly 52 users (1 admin + 1 diner + 50 bulk)", () => {
+      // seeded.users contains only the 50 bulk users; admin and diner are separate
+      expect(seeded.users.length).toBe(fixtures.users.length); // 50 bulk
+      // Named fixtures are always seeded alongside them
+      expect(seeded.admin.id).toBeDefined();
+      expect(seeded.diner.id).toBeDefined();
+    });
+
+    test("bulk users have predictable email and name patterns", () => {
+      fixtures.users.forEach((user, i) => {
+        expect(user.email).toBe(`user${i + 1}@test.com`);
+        expect(user.name).toBe(`Bulk User ${i + 1}`);
+        expect(user.password).toBe(`pass-${i + 1}`);
+      });
+    });
+
+    test("seeded bulk user records all have database ids", () => {
+      expect(seeded.users.length).toBe(fixtures.users.length);
+      seeded.users.forEach((user) => expect(user.id).toBeDefined());
+    });
+  });
+
+  describe("Menu Items", () => {
+    test("seeds exactly 10 menu items", async () => {
+      const menu = await DB.getMenu();
+      expect(menu.length).toBe(fixtures.menuItems.length);
+    });
+
+    test("seeded menu item titles match fixture definitions", async () => {
+      const menu = await DB.getMenu();
+      const seededTitles = menu.map((m) => m.title).sort();
+      const fixtureTitles = fixtures.menuItems.map((m) => m.title).sort();
+      expect(seededTitles).toEqual(fixtureTitles);
+    });
+
+    test("all menu items have positive prices", async () => {
+      const menu = await DB.getMenu();
+      menu.forEach((item) => expect(item.price).toBeGreaterThan(0));
+    });
+  });
+
+  describe("Franchises and Stores", () => {
+    test("seeds exactly 10 franchises", async () => {
+      const [franchises] = await DB.getFranchises(null, 0, 100, "*");
+      expect(franchises.length).toBe(fixtures.franchises.length);
+    });
+
+    test("seeded franchise names match fixture definitions", async () => {
+      const [franchises] = await DB.getFranchises(null, 0, 100, "*");
+      const seededNames = franchises.map((f) => f.name).sort();
+      const fixtureNames = fixtures.franchises.map((f) => f.name).sort();
+      expect(seededNames).toEqual(fixtureNames);
+    });
+
+    test("each franchise has exactly 3 stores", () => {
+      seeded.franchises.forEach((franchise) => {
+        expect(franchise.stores.length).toBe(3);
+      });
+    });
+
+    test("all stores have database ids and belong to their franchise", () => {
+      seeded.franchises.forEach((franchise) => {
+        franchise.stores.forEach((store) => {
+          expect(store.id).toBeDefined();
+          expect(store.franchiseId).toBe(franchise.id);
+        });
+      });
+    });
+  });
+
+  describe("Orders", () => {
+    test("seeds exactly 50 orders (one per bulk user)", () => {
+      expect(seeded.orders.length).toBe(fixtures.users.length);
+    });
+
+    test("all orders have database ids", () => {
+      seeded.orders.forEach((order) => expect(order.id).toBeDefined());
+    });
+
+    test("orders are distributed across franchises", () => {
+      const franchiseIds = new Set(seeded.orders.map((o) => o.franchiseId));
+      // Orders should span more than one franchise
+      expect(franchiseIds.size).toBeGreaterThan(1);
+    });
+
+    test("each bulk user has an order in the database", async () => {
+      // Spot-check first, middle, and last bulk users
+      for (const idx of [0, 24, 49]) {
+        const { orders } = await DB.getOrders(seeded.users[idx], 1);
+        expect(orders.length).toBeGreaterThan(0);
+      }
     });
   });
 });

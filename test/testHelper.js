@@ -1,9 +1,11 @@
-const request = require('supertest');
-const { Role, DB } = require('../src/database/database.js');
+const request = require("supertest");
+const { Role, DB } = require("../src/database/database.js");
+const { fixtures, seedTestDatabase } = require("./testFixtures");
 
 function generateRandomString(length = 10) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_!@#$%^&*()-+=';
-  let result = '';
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_!@#$%^&*()-+=";
+  let result = "";
   for (let i = 0; i < length; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
@@ -33,14 +35,14 @@ async function createUserWithRole(app, role = Role.Diner) {
     userData.id = adminData.id;
 
     // Login to get token
-    const loginRes = await request(app).put('/api/auth').send({
+    const loginRes = await request(app).put("/api/auth").send({
       email: userData.email,
       password: userData.password,
     });
     userData.token = loginRes.body.token;
   } else {
     // Regular users can register normally
-    const registerRes = await request(app).post('/api/auth').send(userData);
+    const registerRes = await request(app).post("/api/auth").send(userData);
     userData.token = registerRes.body.token;
     userData.id = registerRes.body.user.id;
   }
@@ -69,8 +71,8 @@ async function createTestStore(franchiseId) {
 async function createTestMenuItem() {
   const menuItem = {
     title: generateRandomString(),
-    description: 'Test pizza',
-    image: 'pizza.png',
+    description: "Test pizza",
+    image: "pizza.png",
     price: 0.0042,
   };
   const item = await DB.addMenuItem(menuItem);
@@ -84,4 +86,7 @@ module.exports = {
   createTestFranchise,
   createTestStore,
   createTestMenuItem,
+  // Fixture constants and seeding — importable so tests know exactly what's in the DB
+  fixtures,
+  seedTestDatabase,
 };
