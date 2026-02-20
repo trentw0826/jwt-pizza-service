@@ -5,7 +5,6 @@ const {
   generateRandomString,
   createUserWithRole,
   fixtures,
-  seedTestDatabase,
 } = require("../testHelper");
 
 describe("Franchise Router", () => {

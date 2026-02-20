@@ -157,14 +157,12 @@ describe("Order Router", () => {
     });
 
     test("returns 401 without authentication", async () => {
-      const res = await request(app)
-        .put("/api/order/menu")
-        .send({
-          title: generateRandomString(),
-          description: "x",
-          image: "x.png",
-          price: 0.001,
-        });
+      const res = await request(app).put("/api/order/menu").send({
+        title: generateRandomString(),
+        description: "x",
+        image: "x.png",
+        price: 0.001,
+      });
       expect(res.status).toBe(401);
     });
   });
@@ -202,12 +200,6 @@ describe("Order Router", () => {
   // ── POST /api/order ────────────────────────────────────────────────────────
 
   describe("POST /api/order", () => {
-    const orderFor = (items) => ({
-      franchiseId: null, // filled in beforeAll
-      storeId: null,
-      items,
-    });
-
     let baseOrder;
 
     beforeAll(() => {

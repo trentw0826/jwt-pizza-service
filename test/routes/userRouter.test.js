@@ -215,7 +215,7 @@ describe("User Router", () => {
     });
 
     test("non-admin cannot delete another user (403)", async () => {
-      const res = await request(app)
+      await request(app)
         .delete(`/api/user/${otherUser.id}`)
         .set("Authorization", `Bearer ${otherUser.token}`);
 
