@@ -1,0 +1,34 @@
+# Dependencies
+node_modules
+
+# Testing
+coverage
+test
+*.test.js
+
+# Development files
+.git
+.github
+.gitignore
+.eslintrc*
+.prettierrc*
+eslint.config.mjs
+jest.config.json
+
+# Documentation
+README.md
+LICENSE
+*.md
+
+# Build artifacts
+dist
+
+# Scripts
+deployService.sh
+generatePizzaData.sh
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
