@@ -1,0 +1,26 @@
+{
+  "uid": "jwt-pizza-overview",
+  "title": "JWT Pizza Service Overview",
+  "tags": ["jwt-pizza", "terraform"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "Deployment Note",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 },
+      "options": {
+        "mode": "markdown",
+        "content": "This dashboard is managed by Terraform in CI/CD. Replace this panel with real service metrics as needed."
+      }
+    }
+  ],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "annotations": { "list": [] }
+}
