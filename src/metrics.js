@@ -12,6 +12,7 @@ let totalRequests = 0;
 // Middleware to track HTTP requests by method
 function requestTracker(req, res, next) {
   const method = req.method.toUpperCase();
+  console.log(`[metrics] tracked ${method} ${req.path}`);
   if (method in httpMethodCounts) {
     httpMethodCounts[method]++;
   }
@@ -122,6 +123,11 @@ function sendMetricToGrafana(metrics) {
     ],
   };
 
+  console.log(
+    "Pushing metrics:",
+    JSON.stringify({ totalRequests, ...httpMethodCounts }),
+  );
+
   fetch(config.metrics.endpointUrl, {
     method: "POST",
     body: JSON.stringify(body),
@@ -131,6 +137,7 @@ function sendMetricToGrafana(metrics) {
     },
   })
     .then((response) => {
+      console.log("Grafana push status:", response.status);
       if (!response.ok) {
         throw new Error(`HTTP status: ${response.status}`);
       }
