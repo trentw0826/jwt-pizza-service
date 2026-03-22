@@ -1,30 +1,78 @@
 const os = require("os");
 const config = require("./config.js");
 
-// In-memory request counters
-const httpMethodCounts = {
-  GET: 0,
-  POST: 0,
-  PUT: 0,
-  DELETE: 0,
-};
+// ── HTTP request counters ──
+const httpMethodCounts = { GET: 0, POST: 0, PUT: 0, DELETE: 0 };
 let totalRequests = 0;
 
-// Middleware to track HTTP requests by method
+// ── Request latency tracking ──
+let totalRequestLatencyMs = 0;
+let requestLatencyCount = 0;
+
+// ── Active users (unique user IDs seen recently) ──
+const activeUsers = new Set();
+
+// ── Auth counters ──
+let authSuccessCount = 0;
+let authFailCount = 0;
+
+// ── Purchase counters ──
+let pizzasSold = 0;
+let pizzasFailed = 0;
+let totalRevenue = 0;
+let totalPizzaLatencyMs = 0;
+let pizzaLatencyCount = 0;
+
+// ── Middleware: track HTTP method + response latency ──
 function requestTracker(req, res, next) {
   const method = req.method.toUpperCase();
-  console.log(`[metrics] tracked ${method} ${req.path}`);
   if (method in httpMethodCounts) {
     httpMethodCounts[method]++;
   }
   totalRequests++;
+
+  // Track active user if authenticated
+  if (req.user) {
+    activeUsers.add(req.user.id);
+  }
+
+  // Measure response latency
+  const start = Date.now();
+  res.on("finish", () => {
+    const latency = Date.now() - start;
+    totalRequestLatencyMs += latency;
+    requestLatencyCount++;
+  });
+
   next();
 }
 
-// Periodically push metrics to Grafana
+// ── Auth tracking ──
+function authAttempt(success) {
+  if (success) {
+    authSuccessCount++;
+  } else {
+    authFailCount++;
+  }
+}
+
+// ── Purchase tracking ──
+function pizzaPurchase(success, latencyMs, price) {
+  if (success) {
+    pizzasSold++;
+    totalRevenue += price;
+  } else {
+    pizzasFailed++;
+  }
+  totalPizzaLatencyMs += latencyMs;
+  pizzaLatencyCount++;
+}
+
+// ── Periodic push to Grafana ──
 if (config.metrics) {
   setInterval(() => {
     const metrics = [
+      // HTTP request metrics
       createMetric(
         "http_requests_total",
         totalRequests,
@@ -65,6 +113,26 @@ if (config.metrics) {
         "asInt",
         { method: "DELETE" },
       ),
+
+      // Request latency (rolling average)
+      createMetric(
+        "request_latency",
+        requestLatencyCount > 0
+          ? totalRequestLatencyMs / requestLatencyCount
+          : 0,
+        "ms",
+        "gauge",
+        "asDouble",
+        {},
+      ),
+
+      // Active users (unique user IDs in the current window)
+      createMetric("active_users", activeUsers.size, "1", "gauge", "asInt", {}),
+
+      // Auth metrics
+      createMetric("auth_success", authSuccessCount, "1", "sum", "asInt", {}),
+      createMetric("auth_failure", authFailCount, "1", "sum", "asInt", {}),
+
       // System metrics
       createMetric(
         "cpu_usage_percent",
@@ -82,12 +150,26 @@ if (config.metrics) {
         "asDouble",
         {},
       ),
+
+      // Purchase metrics
+      createMetric("pizzas_sold", pizzasSold, "1", "sum", "asInt", {}),
+      createMetric("pizzas_failed", pizzasFailed, "1", "sum", "asInt", {}),
+      createMetric("pizza_revenue", totalRevenue, "BTC", "sum", "asDouble", {}),
+      createMetric(
+        "pizza_creation_latency",
+        pizzaLatencyCount > 0 ? totalPizzaLatencyMs / pizzaLatencyCount : 0,
+        "ms",
+        "gauge",
+        "asDouble",
+        {},
+      ),
     ];
 
     sendMetricToGrafana(metrics);
   }, 10000).unref();
 }
 
+// ── Metric builder ──
 function createMetric(
   metricName,
   metricValue,
@@ -128,6 +210,7 @@ function createMetric(
   return metric;
 }
 
+// ── Grafana push ──
 function sendMetricToGrafana(metrics) {
   const body = {
     resourceMetrics: [
@@ -141,11 +224,6 @@ function sendMetricToGrafana(metrics) {
     ],
   };
 
-  console.log(
-    "Pushing metrics:",
-    JSON.stringify({ totalRequests, ...httpMethodCounts }),
-  );
-
   fetch(config.metrics.endpointUrl, {
     method: "POST",
     body: JSON.stringify(body),
@@ -155,7 +233,6 @@ function sendMetricToGrafana(metrics) {
     },
   })
     .then((response) => {
-      console.log("Grafana push status:", response.status);
       if (!response.ok) {
         throw new Error(`HTTP status: ${response.status}`);
       }
@@ -165,6 +242,7 @@ function sendMetricToGrafana(metrics) {
     });
 }
 
+// ── System helpers ──
 function getCpuUsagePercentage() {
   const cpuUsage = os.loadavg()[0] / os.cpus().length;
   return cpuUsage.toFixed(2) * 100;
@@ -178,4 +256,4 @@ function getMemoryUsagePercentage() {
   return memoryUsage.toFixed(2);
 }
 
-module.exports = { requestTracker };
+module.exports = { requestTracker, pizzaPurchase, authAttempt };

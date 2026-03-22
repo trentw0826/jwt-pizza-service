@@ -12,179 +12,206 @@
 			"id": 1,
 			"type": "timeseries",
 			"title": "HTTP Requests",
-			"gridPos": {
-				"h": 12,
-				"w": 24,
-				"x": 0,
-				"y": 0
-			},
-			"datasource": {
-				"type": "prometheus",
-				"uid": "grafanacloud-prom"
-			},
+			"gridPos": { "h": 10, "w": 16, "x": 0, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
 			"targets": [
-				{
-					"expr": "http_requests_total{source=\"jwt-pizza-service-dev\"}",
-					"legendFormat": "Total",
-					"refId": "A"
-				},
-				{
-					"expr": "http_requests_get{source=\"jwt-pizza-service-dev\"}",
-					"legendFormat": "GET",
-					"refId": "B"
-				},
-				{
-					"expr": "http_requests_post{source=\"jwt-pizza-service-dev\"}",
-					"legendFormat": "POST",
-					"refId": "C"
-				},
-				{
-					"expr": "http_requests_put{source=\"jwt-pizza-service-dev\"}",
-					"legendFormat": "PUT",
-					"refId": "D"
-				},
-				{
-					"expr": "http_requests_delete{source=\"jwt-pizza-service-dev\"}",
-					"legendFormat": "DELETE",
-					"refId": "E"
-				}
+				{ "expr": "http_requests_total{source=\"jwt-pizza-service-dev\"}", "legendFormat": "Total", "refId": "A" },
+				{ "expr": "http_requests_get{source=\"jwt-pizza-service-dev\"}", "legendFormat": "GET", "refId": "B" },
+				{ "expr": "http_requests_post{source=\"jwt-pizza-service-dev\"}", "legendFormat": "POST", "refId": "C" },
+				{ "expr": "http_requests_put{source=\"jwt-pizza-service-dev\"}", "legendFormat": "PUT", "refId": "D" },
+				{ "expr": "http_requests_delete{source=\"jwt-pizza-service-dev\"}", "legendFormat": "DELETE", "refId": "E" }
 			],
 			"fieldConfig": {
 				"defaults": {
-					"custom": {
-						"drawStyle": "line",
-						"lineWidth": 2,
-						"fillOpacity": 10,
-						"gradientMode": "scheme",
-						"spanNulls": true,
-						"pointSize": 5,
-						"showPoints": "auto"
-					},
-					"color": {
-						"mode": "palette-classic"
-					}
+					"custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "gradientMode": "scheme", "spanNulls": true, "pointSize": 5, "showPoints": "auto" },
+					"color": { "mode": "palette-classic" }
 				}
 			},
 			"options": {
-				"tooltip": {
-					"mode": "multi",
-					"sort": "desc"
-				},
-				"legend": {
-					"displayMode": "table",
-					"placement": "right",
-					"calcs": ["lastNotNull"]
-				}
+				"tooltip": { "mode": "multi", "sort": "desc" },
+				"legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull"] }
 			}
 		},
 		{
 			"id": 2,
 			"type": "timeseries",
-			"title": "CPU Usage",
-			"gridPos": {
-				"h": 10,
-				"w": 12,
-				"x": 0,
-				"y": 12
-			},
-			"datasource": {
-				"type": "prometheus",
-				"uid": "grafanacloud-prom"
-			},
+			"title": "Request Latency (avg ms)",
+			"gridPos": { "h": 10, "w": 8, "x": 16, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
 			"targets": [
-				{
-					"expr": "cpu_usage_percent{source=\"jwt-pizza-service-dev\"}",
-					"legendFormat": "CPU %",
-					"refId": "A"
-				}
+				{ "expr": "request_latency{source=\"jwt-pizza-service-dev\"}", "legendFormat": "Avg Latency", "refId": "A" }
 			],
 			"fieldConfig": {
 				"defaults": {
-					"custom": {
-						"drawStyle": "line",
-						"lineWidth": 2,
-						"fillOpacity": 20,
-						"gradientMode": "scheme",
-						"spanNulls": true
-					},
-					"color": {
-						"fixedColor": "orange",
-						"mode": "fixed"
-					},
-					"unit": "percent",
-					"min": 0,
-					"max": 100
+					"custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15, "gradientMode": "scheme", "spanNulls": true },
+					"color": { "fixedColor": "semi-dark-blue", "mode": "fixed" },
+					"unit": "ms"
 				}
 			},
 			"options": {
-				"tooltip": {
-					"mode": "single"
-				},
-				"legend": {
-					"displayMode": "list",
-					"placement": "bottom"
-				}
+				"tooltip": { "mode": "single" },
+				"legend": { "displayMode": "list", "placement": "bottom" }
 			}
 		},
 		{
 			"id": 3,
-			"type": "timeseries",
-			"title": "Memory Usage",
-			"gridPos": {
-				"h": 10,
-				"w": 12,
-				"x": 12,
-				"y": 12
-			},
-			"datasource": {
-				"type": "prometheus",
-				"uid": "grafanacloud-prom"
-			},
+			"type": "stat",
+			"title": "Active Users",
+			"gridPos": { "h": 6, "w": 4, "x": 0, "y": 10 },
+			"datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
 			"targets": [
-				{
-					"expr": "memory_usage_percent{source=\"jwt-pizza-service-dev\"}",
-					"legendFormat": "Memory %",
-					"refId": "A"
-				}
+				{ "expr": "active_users{source=\"jwt-pizza-service-dev\"}", "legendFormat": "Active", "refId": "A" }
 			],
 			"fieldConfig": {
 				"defaults": {
-					"custom": {
-						"drawStyle": "line",
-						"lineWidth": 2,
-						"fillOpacity": 20,
-						"gradientMode": "scheme",
-						"spanNulls": true
+					"thresholds": {
+						"steps": [
+							{ "color": "blue", "value": null },
+							{ "color": "green", "value": 1 },
+							{ "color": "yellow", "value": 50 },
+							{ "color": "red", "value": 200 }
+						]
+					}
+				}
+			},
+			"options": {
+				"reduceOptions": { "calcs": ["lastNotNull"] },
+				"colorMode": "background",
+				"graphMode": "area"
+			}
+		},
+		{
+			"id": 4,
+			"type": "timeseries",
+			"title": "Authentication Attempts",
+			"gridPos": { "h": 6, "w": 10, "x": 4, "y": 10 },
+			"datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
+			"targets": [
+				{ "expr": "auth_success{source=\"jwt-pizza-service-dev\"}", "legendFormat": "Success", "refId": "A" },
+				{ "expr": "auth_failure{source=\"jwt-pizza-service-dev\"}", "legendFormat": "Failure", "refId": "B" }
+			],
+			"fieldConfig": {
+				"defaults": {
+					"custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "spanNulls": true, "pointSize": 5, "showPoints": "auto" },
+					"color": { "mode": "palette-classic" }
+				},
+				"overrides": [
+					{
+						"matcher": { "id": "byName", "options": "Success" },
+						"properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
 					},
-					"color": {
-						"fixedColor": "purple",
-						"mode": "fixed"
-					},
+					{
+						"matcher": { "id": "byName", "options": "Failure" },
+						"properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
+					}
+				]
+			},
+			"options": {
+				"tooltip": { "mode": "multi", "sort": "desc" },
+				"legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull"] }
+			}
+		},
+		{
+			"id": 5,
+			"type": "timeseries",
+			"title": "System: CPU & Memory",
+			"gridPos": { "h": 6, "w": 10, "x": 14, "y": 10 },
+			"datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
+			"targets": [
+				{ "expr": "cpu_usage_percent{source=\"jwt-pizza-service-dev\"}", "legendFormat": "CPU %", "refId": "A" },
+				{ "expr": "memory_usage_percent{source=\"jwt-pizza-service-dev\"}", "legendFormat": "Memory %", "refId": "B" }
+			],
+			"fieldConfig": {
+				"defaults": {
+					"custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 20, "gradientMode": "scheme", "spanNulls": true },
+					"color": { "mode": "palette-classic" },
 					"unit": "percent",
 					"min": 0,
 					"max": 100
 				}
 			},
 			"options": {
-				"tooltip": {
-					"mode": "single"
+				"tooltip": { "mode": "multi", "sort": "desc" },
+				"legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull"] }
+			}
+		},
+		{
+			"id": 6,
+			"type": "timeseries",
+			"title": "Pizza Purchases",
+			"gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
+			"datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
+			"targets": [
+				{ "expr": "pizzas_sold{source=\"jwt-pizza-service-dev\"}", "legendFormat": "Sold", "refId": "A" },
+				{ "expr": "pizzas_failed{source=\"jwt-pizza-service-dev\"}", "legendFormat": "Failed", "refId": "B" }
+			],
+			"fieldConfig": {
+				"defaults": {
+					"custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "gradientMode": "scheme", "spanNulls": true, "pointSize": 5, "showPoints": "auto" },
+					"color": { "mode": "palette-classic" }
 				},
-				"legend": {
-					"displayMode": "list",
-					"placement": "bottom"
+				"overrides": [
+					{
+						"matcher": { "id": "byName", "options": "Sold" },
+						"properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
+					},
+					{
+						"matcher": { "id": "byName", "options": "Failed" },
+						"properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
+					}
+				]
+			},
+			"options": {
+				"tooltip": { "mode": "multi", "sort": "desc" },
+				"legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull"] }
+			}
+		},
+		{
+			"id": 7,
+			"type": "timeseries",
+			"title": "Pizza Revenue (BTC)",
+			"gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 },
+			"datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
+			"targets": [
+				{ "expr": "pizza_revenue{source=\"jwt-pizza-service-dev\"}", "legendFormat": "Revenue", "refId": "A" }
+			],
+			"fieldConfig": {
+				"defaults": {
+					"custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15, "gradientMode": "scheme", "spanNulls": true },
+					"color": { "fixedColor": "yellow", "mode": "fixed" },
+					"unit": "currencyBTC",
+					"decimals": 6
 				}
+			},
+			"options": {
+				"tooltip": { "mode": "single" },
+				"legend": { "displayMode": "list", "placement": "bottom" }
+			}
+		},
+		{
+			"id": 8,
+			"type": "timeseries",
+			"title": "Pizza Creation Latency (avg ms)",
+			"gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+			"datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
+			"targets": [
+				{ "expr": "pizza_creation_latency{source=\"jwt-pizza-service-dev\"}", "legendFormat": "Avg Latency", "refId": "A" }
+			],
+			"fieldConfig": {
+				"defaults": {
+					"custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15, "gradientMode": "scheme", "spanNulls": true },
+					"color": { "fixedColor": "semi-dark-blue", "mode": "fixed" },
+					"unit": "ms"
+				}
+			},
+			"options": {
+				"tooltip": { "mode": "single" },
+				"legend": { "displayMode": "list", "placement": "bottom" }
 			}
 		}
 	],
-	"templating": {
-		"list": []
-	},
-	"time": {
-		"from": "now-1h",
-		"to": "now"
-	},
+	"templating": { "list": [] },
+	"time": { "from": "now-1h", "to": "now" },
 	"timepicker": {},
-	"annotations": {
-		"list": []
-	}
+	"annotations": { "list": [] }
 }
