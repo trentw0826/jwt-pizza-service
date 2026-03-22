@@ -11,6 +11,11 @@ This folder contains a minimal Terraform project that manages Grafana dashboards
 - `GRAFANA_TERRAFORM_URL` (example: `https://your-stack.grafana.net`)
 - `GRAFANA_TERRAFORM_AUTH` (Grafana service account token with dashboard write permissions)
 
+## Optional GitHub secrets
+
+- `GRAFANA_PROM_DS_UID` (defaults to `grafanacloud-prom`)
+- `METRICS_SOURCE` (defaults to `jwt-pizza-service-dev`)
+
 ## Local usage
 
 ```bash

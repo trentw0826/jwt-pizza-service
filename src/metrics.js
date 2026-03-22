@@ -1,6 +1,8 @@
 const os = require("os");
 const config = require("./config.js");
 
+const exporterStartTimeUnixNano = Date.now() * 1000000;
+
 // ── HTTP request counters ──
 const httpMethodCounts = { GET: 0, POST: 0, PUT: 0, DELETE: 0 };
 let totalRequests = 0;
@@ -31,17 +33,17 @@ function requestTracker(req, res, next) {
   }
   totalRequests++;
 
-  // Track active user if authenticated
-  if (req.user) {
-    activeUsers.add(req.user.id);
-  }
-
-  // Measure response latency
+  // Measure response latency and track active user after response
   const start = Date.now();
   res.on("finish", () => {
     const latency = Date.now() - start;
     totalRequestLatencyMs += latency;
     requestLatencyCount++;
+
+    // Track active user (req.user is set by setAuthUser middleware by now)
+    if (req.user) {
+      activeUsers.add(req.user.id);
+    }
   });
 
   next();
@@ -180,13 +182,18 @@ function createMetric(
 ) {
   attributes = { ...attributes, source: config.metrics.source };
 
+  const normalizedValue = normalizeMetricValue(metricValue, valueType);
+  if (normalizedValue === null) {
+    return null;
+  }
+
   const metric = {
     name: metricName,
     unit: metricUnit,
     [metricType]: {
       dataPoints: [
         {
-          [valueType]: metricValue,
+          [valueType]: normalizedValue,
           timeUnixNano: Date.now() * 1000000,
           attributes: [],
         },
@@ -202,6 +209,8 @@ function createMetric(
   });
 
   if (metricType === "sum") {
+    metric[metricType].dataPoints[0].startTimeUnixNano =
+      exporterStartTimeUnixNano;
     metric[metricType].aggregationTemporality =
       "AGGREGATION_TEMPORALITY_CUMULATIVE";
     metric[metricType].isMonotonic = true;
@@ -210,19 +219,60 @@ function createMetric(
   return metric;
 }
 
+function normalizeMetricValue(metricValue, valueType) {
+  const numericValue = Number(metricValue);
+  if (!Number.isFinite(numericValue)) {
+    return null;
+  }
+
+  if (valueType === "asInt") {
+    return Math.trunc(numericValue);
+  }
+
+  return numericValue;
+}
+
 // ── Grafana push ──
 function sendMetricToGrafana(metrics) {
+  const validMetrics = metrics.filter(Boolean);
+
+  if (validMetrics.length === 0) {
+    return;
+  }
+
   const body = {
     resourceMetrics: [
       {
+        resource: {
+          attributes: [
+            {
+              key: "service.name",
+              value: {
+                stringValue: config.metrics.source || "jwt-pizza-service",
+              },
+            },
+          ],
+        },
         scopeMetrics: [
           {
-            metrics,
+            scope: {
+              name: "jwt-pizza-service.metrics",
+            },
+            metrics: validMetrics,
           },
         ],
       },
     ],
   };
+
+  // Debug: compact summary of all metric values
+  const summary = validMetrics.map((m) => {
+    const type = m.sum ? "sum" : "gauge";
+    const dp = m[type].dataPoints[0];
+    const val = dp.asInt ?? dp.asDouble ?? 0;
+    return `${m.name}=${val}`;
+  });
+  console.log("[metrics push]", summary.join(", "));
 
   fetch(config.metrics.endpointUrl, {
     method: "POST",
@@ -232,9 +282,33 @@ function sendMetricToGrafana(metrics) {
       "Content-Type": "application/json",
     },
   })
-    .then((response) => {
+    .then(async (response) => {
+      const responseBody = await response.text();
+
       if (!response.ok) {
-        throw new Error(`HTTP status: ${response.status}`);
+        throw new Error(`HTTP status: ${response.status} body=${responseBody}`);
+      }
+
+      if (!responseBody) {
+        return;
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(responseBody);
+      } catch {
+        return;
+      }
+
+      const partial = parsed.partialSuccess;
+      if (partial) {
+        console.warn(
+          "[metrics partial success]",
+          JSON.stringify({
+            rejectedDataPoints: partial.rejectedDataPoints,
+            errorMessage: partial.errorMessage,
+          }),
+        );
       }
     })
     .catch((error) => {
@@ -253,7 +327,7 @@ function getMemoryUsagePercentage() {
   const freeMemory = os.freemem();
   const usedMemory = totalMemory - freeMemory;
   const memoryUsage = (usedMemory / totalMemory) * 100;
-  return memoryUsage.toFixed(2);
+  return Number(memoryUsage.toFixed(2));
 }
 
 module.exports = { requestTracker, pizzaPurchase, authAttempt };
