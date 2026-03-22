@@ -10,10 +10,12 @@ const userRouter = require("./routes/userRouter.js");
 // Import version and config
 const version = require("./version.json");
 const config = require("./config.js");
+const { requestTracker } = require("./metrics.js");
 
 // Initialize Express application
 const app = express();
 app.use(express.json()); // Middleware to parse JSON request bodies
+app.use(requestTracker); // Track HTTP requests for Grafana metrics
 app.use(setAuthUser); // Custom middleware to set authenticated user if token is valid
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
