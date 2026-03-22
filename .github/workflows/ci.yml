@@ -153,38 +153,38 @@ jobs:
           name: package
           path: dist/
 
-  grafana-dashboard:
-    name: Grafana Dashboard Deploy
-    runs-on: ubuntu-latest
-    needs: deploy
-    env:
-      TF_VAR_grafana_url: ${{ secrets.GRAFANA_TERRAFORM_URL }}
-      TF_VAR_grafana_auth: ${{ secrets.GRAFANA_TERRAFORM_AUTH }}
-      TF_VAR_prometheus_datasource_uid: ${{ secrets.GRAFANA_PROM_DS_UID || 'grafanacloud-prom' }}
-      TF_VAR_metrics_source: ${{ secrets.METRICS_SOURCE || 'jwt-pizza-service-dev' }}
+  # grafana-dashboard:
+  #   name: Grafana Dashboard Deploy
+  #   runs-on: ubuntu-latest
+  #   needs: deploy
+  #   env:
+  #     TF_VAR_grafana_url: ${{ secrets.GRAFANA_TERRAFORM_URL }}
+  #     TF_VAR_grafana_auth: ${{ secrets.GRAFANA_TERRAFORM_AUTH }}
+  #     TF_VAR_prometheus_datasource_uid: ${{ secrets.GRAFANA_PROM_DS_UID || 'grafanacloud-prom' }}
+  #     TF_VAR_metrics_source: ${{ secrets.METRICS_SOURCE || 'jwt-pizza-service-dev' }}
 
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+  # steps:
+  #   - name: Checkout repo
+  #     uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+  #   - name: Setup Terraform
+  #     uses: hashicorp/setup-terraform@v3
 
-      - name: Terraform init
-        working-directory: terraform/grafana
-        run: terraform init
+  #   - name: Terraform init
+  #     working-directory: terraform/grafana
+  #     run: terraform init
 
-      - name: Terraform validate
-        working-directory: terraform/grafana
-        run: terraform validate
+  #   - name: Terraform validate
+  #     working-directory: terraform/grafana
+  #     run: terraform validate
 
-      - name: Terraform plan
-        working-directory: terraform/grafana
-        run: terraform plan -out=tfplan
+  #   - name: Terraform plan
+  #     working-directory: terraform/grafana
+  #     run: terraform plan -out=tfplan
 
-      - name: Terraform apply
-        working-directory: terraform/grafana
-        run: terraform apply -auto-approve tfplan
+  #   - name: Terraform apply
+  #     working-directory: terraform/grafana
+  #     run: terraform apply -auto-approve tfplan
 
   deploy:
     runs-on: ubuntu-latest
