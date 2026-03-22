@@ -1,10 +1,7 @@
 {
 	"uid": "jwt-pizza-overview",
 	"title": "JWT Pizza Service Overview",
-	"tags": [
-		"jwt-pizza",
-		"terraform"
-	],
+	"tags": ["jwt-pizza", "terraform"],
 	"timezone": "browser",
 	"schemaVersion": 39,
 	"version": 1,
@@ -13,11 +10,11 @@
 	"panels": [
 		{
 			"id": 1,
-			"type": "stat",
-			"title": "Total Requests",
+			"type": "timeseries",
+			"title": "HTTP Requests",
 			"gridPos": {
-				"h": 6,
-				"w": 6,
+				"h": 14,
+				"w": 24,
 				"x": 0,
 				"y": 0
 			},
@@ -30,270 +27,26 @@
 					"expr": "http_requests_total{source=\"jwt-pizza-service-dev\"}",
 					"legendFormat": "Total",
 					"refId": "A"
-				}
-			],
-			"fieldConfig": {
-				"defaults": {
-					"thresholds": {
-						"steps": [
-							{
-								"color": "blue",
-								"value": null
-							},
-							{
-								"color": "green",
-								"value": 100
-							},
-							{
-								"color": "yellow",
-								"value": 10000
-							}
-						]
-					}
-				}
-			},
-			"options": {
-				"reduceOptions": {
-					"calcs": [
-						"lastNotNull"
-					]
 				},
-				"colorMode": "background"
-			}
-		},
-		{
-			"id": 2,
-			"type": "timeseries",
-			"title": "Requests per Minute",
-			"gridPos": {
-				"h": 10,
-				"w": 18,
-				"x": 6,
-				"y": 0
-			},
-			"datasource": {
-				"type": "prometheus",
-				"uid": "grafanacloud-prom"
-			},
-			"targets": [
-				{
-					"expr": "rate(http_requests_total{source=\"jwt-pizza-service-dev\"}[1m]) * 60",
-					"legendFormat": "Total req/min",
-					"refId": "A"
-				}
-			],
-			"fieldConfig": {
-				"defaults": {
-					"custom": {
-						"drawStyle": "line",
-						"lineWidth": 2,
-						"fillOpacity": 15,
-						"gradientMode": "scheme",
-						"spanNulls": true
-					},
-					"color": {
-						"mode": "palette-classic"
-					},
-					"unit": "reqpm"
-				}
-			},
-			"options": {
-				"tooltip": {
-					"mode": "multi",
-					"sort": "desc"
-				},
-				"legend": {
-					"displayMode": "list",
-					"placement": "bottom"
-				}
-			}
-		},
-		{
-			"id": 3,
-			"type": "stat",
-			"title": "GET Requests",
-			"gridPos": {
-				"h": 4,
-				"w": 6,
-				"x": 0,
-				"y": 6
-			},
-			"datasource": {
-				"type": "prometheus",
-				"uid": "grafanacloud-prom"
-			},
-			"targets": [
 				{
 					"expr": "http_requests_get{source=\"jwt-pizza-service-dev\"}",
 					"legendFormat": "GET",
-					"refId": "A"
-				}
-			],
-			"fieldConfig": {
-				"defaults": {
-					"color": {
-						"fixedColor": "green",
-						"mode": "fixed"
-					}
-				}
-			},
-			"options": {
-				"reduceOptions": {
-					"calcs": [
-						"lastNotNull"
-					]
-				},
-				"colorMode": "value"
-			}
-		},
-		{
-			"id": 4,
-			"type": "stat",
-			"title": "POST Requests",
-			"gridPos": {
-				"h": 4,
-				"w": 6,
-				"x": 0,
-				"y": 10
-			},
-			"datasource": {
-				"type": "prometheus",
-				"uid": "grafanacloud-prom"
-			},
-			"targets": [
-				{
-					"expr": "http_requests_post{source=\"jwt-pizza-service-dev\"}",
-					"legendFormat": "POST",
-					"refId": "A"
-				}
-			],
-			"fieldConfig": {
-				"defaults": {
-					"color": {
-						"fixedColor": "orange",
-						"mode": "fixed"
-					}
-				}
-			},
-			"options": {
-				"reduceOptions": {
-					"calcs": [
-						"lastNotNull"
-					]
-				},
-				"colorMode": "value"
-			}
-		},
-		{
-			"id": 5,
-			"type": "stat",
-			"title": "PUT Requests",
-			"gridPos": {
-				"h": 4,
-				"w": 6,
-				"x": 0,
-				"y": 14
-			},
-			"datasource": {
-				"type": "prometheus",
-				"uid": "grafanacloud-prom"
-			},
-			"targets": [
-				{
-					"expr": "http_requests_put{source=\"jwt-pizza-service-dev\"}",
-					"legendFormat": "PUT",
-					"refId": "A"
-				}
-			],
-			"fieldConfig": {
-				"defaults": {
-					"color": {
-						"fixedColor": "purple",
-						"mode": "fixed"
-					}
-				}
-			},
-			"options": {
-				"reduceOptions": {
-					"calcs": [
-						"lastNotNull"
-					]
-				},
-				"colorMode": "value"
-			}
-		},
-		{
-			"id": 6,
-			"type": "stat",
-			"title": "DELETE Requests",
-			"gridPos": {
-				"h": 4,
-				"w": 6,
-				"x": 0,
-				"y": 18
-			},
-			"datasource": {
-				"type": "prometheus",
-				"uid": "grafanacloud-prom"
-			},
-			"targets": [
-				{
-					"expr": "http_requests_delete{source=\"jwt-pizza-service-dev\"}",
-					"legendFormat": "DELETE",
-					"refId": "A"
-				}
-			],
-			"fieldConfig": {
-				"defaults": {
-					"color": {
-						"fixedColor": "red",
-						"mode": "fixed"
-					}
-				}
-			},
-			"options": {
-				"reduceOptions": {
-					"calcs": [
-						"lastNotNull"
-					]
-				},
-				"colorMode": "value"
-			}
-		},
-		{
-			"id": 7,
-			"type": "timeseries",
-			"title": "Requests by Method over Time",
-			"gridPos": {
-				"h": 12,
-				"w": 18,
-				"x": 6,
-				"y": 10
-			},
-			"datasource": {
-				"type": "prometheus",
-				"uid": "grafanacloud-prom"
-			},
-			"targets": [
-				{
-					"expr": "rate(http_requests_get{source=\"jwt-pizza-service-dev\"}[1m]) * 60",
-					"legendFormat": "GET",
-					"refId": "A"
-				},
-				{
-					"expr": "rate(http_requests_post{source=\"jwt-pizza-service-dev\"}[1m]) * 60",
-					"legendFormat": "POST",
 					"refId": "B"
 				},
 				{
-					"expr": "rate(http_requests_put{source=\"jwt-pizza-service-dev\"}[1m]) * 60",
-					"legendFormat": "PUT",
+					"expr": "http_requests_post{source=\"jwt-pizza-service-dev\"}",
+					"legendFormat": "POST",
 					"refId": "C"
 				},
 				{
-					"expr": "rate(http_requests_delete{source=\"jwt-pizza-service-dev\"}[1m]) * 60",
-					"legendFormat": "DELETE",
+					"expr": "http_requests_put{source=\"jwt-pizza-service-dev\"}",
+					"legendFormat": "PUT",
 					"refId": "D"
+				},
+				{
+					"expr": "http_requests_delete{source=\"jwt-pizza-service-dev\"}",
+					"legendFormat": "DELETE",
+					"refId": "E"
 				}
 			],
 			"fieldConfig": {
@@ -302,15 +55,14 @@
 						"drawStyle": "line",
 						"lineWidth": 2,
 						"fillOpacity": 10,
-						"stacking": {
-							"mode": "normal"
-						},
-						"spanNulls": true
+						"gradientMode": "scheme",
+						"spanNulls": true,
+						"pointSize": 5,
+						"showPoints": "auto"
 					},
 					"color": {
 						"mode": "palette-classic"
-					},
-					"unit": "reqpm"
+					}
 				}
 			},
 			"options": {
@@ -319,8 +71,9 @@
 					"sort": "desc"
 				},
 				"legend": {
-					"displayMode": "list",
-					"placement": "bottom"
+					"displayMode": "table",
+					"placement": "right",
+					"calcs": ["lastNotNull"]
 				}
 			}
 		}
