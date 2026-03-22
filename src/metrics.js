@@ -282,7 +282,7 @@ function sendMetricToGrafana(metrics) {
     const val = dp.asInt ?? dp.asDouble ?? 0;
     return `${m.name}=${val}`;
   });
-  console.log("[metrics push]", summary.join(", "));
+  // console.log("[metrics push]", summary.join(", "));
 
   fetch(config.metrics.endpointUrl, {
     method: "POST",
