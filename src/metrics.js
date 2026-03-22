@@ -276,12 +276,12 @@ function sendMetricToGrafana(metrics) {
   };
 
   // Debug: compact summary of all metric values
-  const summary = validMetrics.map((m) => {
-    const type = m.sum ? "sum" : "gauge";
-    const dp = m[type].dataPoints[0];
-    const val = dp.asInt ?? dp.asDouble ?? 0;
-    return `${m.name}=${val}`;
-  });
+  // const summary = validMetrics.map((m) => {
+  //   const type = m.sum ? "sum" : "gauge";
+  //   const dp = m[type].dataPoints[0];
+  //   const val = dp.asInt ?? dp.asDouble ?? 0;
+  //   return `${m.name}=${val}`;
+  // });
   // console.log("[metrics push]", summary.join(", "));
 
   fetch(config.metrics.endpointUrl, {
