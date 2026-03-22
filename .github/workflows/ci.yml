@@ -197,7 +197,6 @@ jobs:
     name: Grafana Dashboard Deploy
     runs-on: ubuntu-latest
     needs: deploy
-    if: ${{ secrets.GRAFANA_TERRAFORM_URL != '' && secrets.GRAFANA_TERRAFORM_AUTH != '' }}
     env:
       TF_VAR_grafana_url: ${{ secrets.GRAFANA_TERRAFORM_URL }}
       TF_VAR_grafana_auth: ${{ secrets.GRAFANA_TERRAFORM_AUTH }}
