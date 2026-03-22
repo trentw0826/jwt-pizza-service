@@ -13,7 +13,7 @@
 			"type": "timeseries",
 			"title": "HTTP Requests",
 			"gridPos": {
-				"h": 14,
+				"h": 12,
 				"w": 24,
 				"x": 0,
 				"y": 0
@@ -74,6 +74,104 @@
 					"displayMode": "table",
 					"placement": "right",
 					"calcs": ["lastNotNull"]
+				}
+			}
+		},
+		{
+			"id": 2,
+			"type": "timeseries",
+			"title": "CPU Usage",
+			"gridPos": {
+				"h": 10,
+				"w": 12,
+				"x": 0,
+				"y": 12
+			},
+			"datasource": {
+				"type": "prometheus",
+				"uid": "grafanacloud-prom"
+			},
+			"targets": [
+				{
+					"expr": "cpu_usage_percent{source=\"jwt-pizza-service-dev\"}",
+					"legendFormat": "CPU %",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"custom": {
+						"drawStyle": "line",
+						"lineWidth": 2,
+						"fillOpacity": 20,
+						"gradientMode": "scheme",
+						"spanNulls": true
+					},
+					"color": {
+						"fixedColor": "orange",
+						"mode": "fixed"
+					},
+					"unit": "percent",
+					"min": 0,
+					"max": 100
+				}
+			},
+			"options": {
+				"tooltip": {
+					"mode": "single"
+				},
+				"legend": {
+					"displayMode": "list",
+					"placement": "bottom"
+				}
+			}
+		},
+		{
+			"id": 3,
+			"type": "timeseries",
+			"title": "Memory Usage",
+			"gridPos": {
+				"h": 10,
+				"w": 12,
+				"x": 12,
+				"y": 12
+			},
+			"datasource": {
+				"type": "prometheus",
+				"uid": "grafanacloud-prom"
+			},
+			"targets": [
+				{
+					"expr": "memory_usage_percent{source=\"jwt-pizza-service-dev\"}",
+					"legendFormat": "Memory %",
+					"refId": "A"
+				}
+			],
+			"fieldConfig": {
+				"defaults": {
+					"custom": {
+						"drawStyle": "line",
+						"lineWidth": 2,
+						"fillOpacity": 20,
+						"gradientMode": "scheme",
+						"spanNulls": true
+					},
+					"color": {
+						"fixedColor": "purple",
+						"mode": "fixed"
+					},
+					"unit": "percent",
+					"min": 0,
+					"max": 100
+				}
+			},
+			"options": {
+				"tooltip": {
+					"mode": "single"
+				},
+				"legend": {
+					"displayMode": "list",
+					"placement": "bottom"
 				}
 			}
 		}
