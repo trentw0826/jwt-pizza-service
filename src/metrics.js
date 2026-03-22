@@ -180,7 +180,11 @@ function createMetric(
   valueType,
   attributes,
 ) {
-  attributes = { ...attributes, source: config.metrics.source };
+  attributes = {
+    ...attributes,
+    service: config.metrics.service,
+    environment: config.metrics.environment,
+  };
 
   const normalizedValue = normalizeMetricValue(metricValue, valueType);
   if (normalizedValue === null) {
@@ -248,7 +252,13 @@ function sendMetricToGrafana(metrics) {
             {
               key: "service.name",
               value: {
-                stringValue: config.metrics.source || "jwt-pizza-service",
+                stringValue: config.metrics.service,
+              },
+            },
+            {
+              key: "environment",
+              value: {
+                stringValue: config.metrics.environment,
               },
             },
           ],
