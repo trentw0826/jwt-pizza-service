@@ -20,52 +20,54 @@ function requestTracker(req, res, next) {
 }
 
 // Periodically push metrics to Grafana
-setInterval(() => {
-  const metrics = [
-    createMetric(
-      "http_requests_total",
-      totalRequests,
-      "1",
-      "sum",
-      "asInt",
-      {},
-    ),
-    createMetric(
-      "http_requests_get",
-      httpMethodCounts.GET,
-      "1",
-      "sum",
-      "asInt",
-      { method: "GET" },
-    ),
-    createMetric(
-      "http_requests_post",
-      httpMethodCounts.POST,
-      "1",
-      "sum",
-      "asInt",
-      { method: "POST" },
-    ),
-    createMetric(
-      "http_requests_put",
-      httpMethodCounts.PUT,
-      "1",
-      "sum",
-      "asInt",
-      { method: "PUT" },
-    ),
-    createMetric(
-      "http_requests_delete",
-      httpMethodCounts.DELETE,
-      "1",
-      "sum",
-      "asInt",
-      { method: "DELETE" },
-    ),
-  ];
+if (config.metrics) {
+  setInterval(() => {
+    const metrics = [
+      createMetric(
+        "http_requests_total",
+        totalRequests,
+        "1",
+        "sum",
+        "asInt",
+        {},
+      ),
+      createMetric(
+        "http_requests_get",
+        httpMethodCounts.GET,
+        "1",
+        "sum",
+        "asInt",
+        { method: "GET" },
+      ),
+      createMetric(
+        "http_requests_post",
+        httpMethodCounts.POST,
+        "1",
+        "sum",
+        "asInt",
+        { method: "POST" },
+      ),
+      createMetric(
+        "http_requests_put",
+        httpMethodCounts.PUT,
+        "1",
+        "sum",
+        "asInt",
+        { method: "PUT" },
+      ),
+      createMetric(
+        "http_requests_delete",
+        httpMethodCounts.DELETE,
+        "1",
+        "sum",
+        "asInt",
+        { method: "DELETE" },
+      ),
+    ];
 
-  sendMetricToGrafana(metrics);
-}, 10000).unref();
+    sendMetricToGrafana(metrics);
+  }, 10000).unref();
+}
 
 function createMetric(
   metricName,

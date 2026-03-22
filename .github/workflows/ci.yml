@@ -47,10 +47,6 @@ jobs:
           check_secret "FACTORY_API_KEY" "${{ secrets.FACTORY_API_KEY }}"
           check_secret "JWT_SECRET" "${{ secrets.JWT_SECRET }}"
           check_secret "NET_ID" "${{ secrets.NET_ID }}"
-          check_secret "METRICS_SOURCE" "${{ secrets.METRICS_SOURCE }}"
-          check_secret "METRICS_ENDPOINT_URL" "${{ secrets.METRICS_ENDPOINT_URL }}"
-          check_secret "METRICS_ACCOUNT_ID" "${{ secrets.METRICS_ACCOUNT_ID }}"
-          check_secret "METRICS_API_KEY" "${{ secrets.METRICS_API_KEY }}"
 
           if [ "$missing" -eq 1 ]; then
             echo "One or more required secrets are missing"
@@ -117,13 +113,6 @@ jobs:
               url: 'https://pizza-factory.cs329.click',
               apiKey: '${{ secrets.FACTORY_API_KEY }}',
             },
-            metrics: {
-              source: 'jwt-pizza-service',
-              pushIntervalMs: 10000,
-              endpointUrl: 'https://metrics-placeholder',
-              accountId: '0000000',
-              apiKey: 'metrics-api-key-placeholder',
-            },
           };" > src/config.js
 
       - name: Run tests
@@ -151,10 +140,6 @@ jobs:
           sed -i "s/root/${{ secrets.DB_USERNAME }}/g" dist/config.js
           sed -i "s/tempdbpassword/${{ secrets.DB_PASSWORD }}/g" dist/config.js
           sed -i "s/127.0.0.1/${{ secrets.DB_HOSTNAME }}/g" dist/config.js
-          sed -i "s|jwt-pizza-service|${{ secrets.METRICS_SOURCE }}|g" dist/config.js
-          sed -i "s|https://metrics-placeholder|${{ secrets.METRICS_ENDPOINT_URL }}|g" dist/config.js
-          sed -i "s/0000000/${{ secrets.METRICS_ACCOUNT_ID }}/g" dist/config.js
-          sed -i "s/metrics-api-key-placeholder/${{ secrets.METRICS_API_KEY }}/g" dist/config.js
 
       - name: Update distribution artifact
         uses: actions/upload-artifact@v4
@@ -201,24 +186,3 @@ jobs:
         run: |
           docker build --platform=linux/arm64 -t $ECR_REGISTRY/$ECR_REPOSITORY --push .
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:latest" >>  $GITHUB_OUTPUT
-
-  grafana:
-    name: Deploy Grafana Dashboard
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "~1.6"
-
-      - name: Deploy dashboard
-        working-directory: terraform/grafana
-        run: |
-          terraform init
-          terraform apply -auto-approve \
-            -var="grafana_url=${{ secrets.GRAFANA_TERRAFORM_URL }}" \
-            -var="grafana_auth=${{ secrets.GRAFANA_TERRAFORM_AUTH }}"
