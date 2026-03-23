@@ -19,7 +19,7 @@ COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY . .
 
 ENV NODE_ENV=production
-ENV ENVIRONMENT=prod
+ENV METRICS_SOURCE=jwt-pizza-service-prod
 
 EXPOSE 80
 CMD ["node", "index.js", "80"]

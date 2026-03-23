@@ -10,8 +10,8 @@ locals {
       "\"uid\": \"grafanacloud-prom\"",
       "\"uid\": \"${var.prometheus_datasource_uid}\"",
     ),
-    "source=\"jwt-pizza-service-dev\"",
-    "source=\"${var.metrics_source}\"",
+    "\"current\": { \"text\": \"jwt-pizza-service-dev\", \"value\": \"jwt-pizza-service-dev\" }",
+    "\"current\": { \"text\": \"${var.metrics_source}\", \"value\": \"${var.metrics_source}\" }",
   )
 }
 

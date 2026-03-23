@@ -182,8 +182,7 @@ function createMetric(
 ) {
   attributes = {
     ...attributes,
-    service: config.metrics.service,
-    environment: config.metrics.environment,
+    source: config.metrics.source,
   };
 
   const normalizedValue = normalizeMetricValue(metricValue, valueType);
@@ -252,13 +251,7 @@ function sendMetricToGrafana(metrics) {
             {
               key: "service.name",
               value: {
-                stringValue: config.metrics.service,
-              },
-            },
-            {
-              key: "environment",
-              value: {
-                stringValue: config.metrics.environment,
+                stringValue: config.metrics.source,
               },
             },
           ],

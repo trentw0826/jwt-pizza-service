@@ -16,27 +16,27 @@
       "datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
       "targets": [
         {
-          "expr": "http_requests_total{service=\"jwt-pizza-service\",environment=\"$environment\"}",
+          "expr": "http_requests_total{source=\"$source\"}",
           "legendFormat": "Total",
           "refId": "A"
         },
         {
-          "expr": "http_requests_get_total{service=\"jwt-pizza-service\",environment=\"$environment\"}",
+          "expr": "http_requests_get_total{source=\"$source\"}",
           "legendFormat": "GET",
           "refId": "B"
         },
         {
-          "expr": "http_requests_post_total{service=\"jwt-pizza-service\",environment=\"$environment\"}",
+          "expr": "http_requests_post_total{source=\"$source\"}",
           "legendFormat": "POST",
           "refId": "C"
         },
         {
-          "expr": "http_requests_put_total{service=\"jwt-pizza-service\",environment=\"$environment\"}",
+          "expr": "http_requests_put_total{source=\"$source\"}",
           "legendFormat": "PUT",
           "refId": "D"
         },
         {
-          "expr": "http_requests_delete_total{service=\"jwt-pizza-service\",environment=\"$environment\"}",
+          "expr": "http_requests_delete_total{source=\"$source\"}",
           "legendFormat": "DELETE",
           "refId": "E"
         }
@@ -112,7 +112,7 @@
       "datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
       "targets": [
         {
-          "expr": "request_latency_milliseconds{service=\"jwt-pizza-service\",environment=\"$environment\"}",
+          "expr": "request_latency_milliseconds{source=\"$source\"}",
           "legendFormat": "Avg Latency",
           "refId": "A"
         }
@@ -186,7 +186,7 @@
       "datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
       "targets": [
         {
-          "expr": "active_users_ratio{service=\"jwt-pizza-service\",environment=\"$environment\"}",
+          "expr": "active_users_ratio{source=\"$source\"}",
           "legendFormat": "Active",
           "refId": "A"
         }
@@ -230,12 +230,12 @@
       "datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
       "targets": [
         {
-          "expr": "auth_success_total{service=\"jwt-pizza-service\",environment=\"$environment\"}",
+          "expr": "auth_success_total{source=\"$source\"}",
           "legendFormat": "Success",
           "refId": "A"
         },
         {
-          "expr": "auth_failure_total{service=\"jwt-pizza-service\",environment=\"$environment\"}",
+          "expr": "auth_failure_total{source=\"$source\"}",
           "legendFormat": "Failure",
           "refId": "B"
         }
@@ -343,12 +343,12 @@
       "datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
       "targets": [
         {
-          "expr": "cpu_usage_percent{service=\"jwt-pizza-service\",environment=\"$environment\"}",
+          "expr": "cpu_usage_percent{source=\"$source\"}",
           "legendFormat": "CPU %",
           "refId": "A"
         },
         {
-          "expr": "memory_usage_percent{service=\"jwt-pizza-service\",environment=\"$environment\"}",
+          "expr": "memory_usage_percent{source=\"$source\"}",
           "legendFormat": "Memory %",
           "refId": "B"
         }
@@ -431,12 +431,12 @@
       "datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
       "targets": [
         {
-          "expr": "pizzas_sold_total{service=\"jwt-pizza-service\",environment=\"$environment\"}",
+          "expr": "pizzas_sold_total{source=\"$source\"}",
           "legendFormat": "Sold",
           "refId": "A"
         },
         {
-          "expr": "pizzas_failed_total{service=\"jwt-pizza-service\",environment=\"$environment\"}",
+          "expr": "pizzas_failed_total{source=\"$source\"}",
           "legendFormat": "Failed",
           "refId": "B"
         }
@@ -544,7 +544,7 @@
       "datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
       "targets": [
         {
-          "expr": "pizza_revenue_BTC_total{service=\"jwt-pizza-service\",environment=\"$environment\"}",
+          "expr": "pizza_revenue_BTC_total{source=\"$source\"}",
           "legendFormat": "Revenue",
           "refId": "A"
         }
@@ -580,7 +580,7 @@
       "datasource": { "type": "prometheus", "uid": "grafanacloud-prom" },
       "targets": [
         {
-          "expr": "pizza_creation_latency_milliseconds{service=\"jwt-pizza-service\",environment=\"$environment\"}",
+          "expr": "pizza_creation_latency_milliseconds{source=\"$source\"}",
           "legendFormat": "Avg Latency",
           "refId": "A"
         }
@@ -650,15 +650,21 @@
   "templating": {
     "list": [
       {
-        "name": "environment",
+        "name": "source",
         "type": "custom",
-        "description": "Environment to monitor",
+        "description": "Metric source to monitor",
         "hide": 0,
         "options": [
-          { "text": "dev", "value": "dev" },
-          { "text": "prod", "value": "prod" }
+          { "text": "jwt-pizza-service-dev", "value": "jwt-pizza-service-dev" },
+          {
+            "text": "jwt-pizza-service-prod",
+            "value": "jwt-pizza-service-prod"
+          }
         ],
-        "current": { "text": "dev", "value": "dev" },
+        "current": {
+          "text": "jwt-pizza-service-dev",
+          "value": "jwt-pizza-service-dev"
+        },
         "multi": false,
         "includeAll": false
       }

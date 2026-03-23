@@ -114,7 +114,7 @@ jobs:
               apiKey: '${{ secrets.FACTORY_API_KEY }}',
             },
             metrics: {
-              source: '${{ secrets.METRICS_SOURCE || 'jwt-pizza-service-dev' }}',
+              source: '${{ secrets.METRICS_SOURCE }}',
               endpointUrl: '${{ secrets.METRICS_ENDPOINT_URL }}',
               accountId: '${{ secrets.METRICS_ACCOUNT_ID }}',
               apiKey: '${{ secrets.METRICS_API_KEY }}',
@@ -162,7 +162,7 @@ jobs:
   #     TF_VAR_grafana_url: ${{ secrets.GRAFANA_TERRAFORM_URL }}
   #     TF_VAR_grafana_auth: ${{ secrets.GRAFANA_TERRAFORM_AUTH }}
   #     TF_VAR_prometheus_datasource_uid: ${{ secrets.GRAFANA_PROM_DS_UID || 'grafanacloud-prom' }}
-  #     TF_VAR_metrics_source: ${{ secrets.METRICS_SOURCE || 'jwt-pizza-service-dev' }}
+  #     TF_VAR_metrics_source: ${{ secrets.METRICS_SOURCE || 'jwt-pizza-service' }}
 
   # steps:
   #   - name: Checkout repo
