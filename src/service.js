@@ -64,10 +64,16 @@ app.use("*", (req, res) => {
 
 // Default error handler for all exceptions and errors.
 app.use((err, req, res, next) => {
-  res
-    .status(err.statusCode ?? 500)
-    .json({ message: err.message, stack: err.stack });
-  next();
+  const statusCode = err.statusCode ?? 500;
+  const response = {
+    message: statusCode === 500 ? "Internal server error" : err.message,
+  };
+
+  if (process.env.NODE_ENV !== "production") {
+    response.stack = err.stack;
+  }
+
+  res.status(statusCode).json(response);
 });
 
 module.exports = app;

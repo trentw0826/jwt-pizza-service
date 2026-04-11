@@ -22,4 +22,11 @@
 
 ## Attack 3
 
-_TBD_
+| Item           | Result                                                                                                   |
+| -------------- | -------------------------------------------------------------------------------------------------------- |
+| Date           | Apr 11, 2026                                                                                             |
+| Classification | Security Misconfiguration                                                                                |
+| Severity       | 3                                                                                                        |
+| Description    | API error responses exposed internal stack traces, revealing file paths and server internals.            |
+| Images         | ![User-facing stack trace](./images/user-facing-stack-trace.png)                                         |
+| Corrections    | Update global error handler to return sanitized errors in production and hide stack traces from clients. |
