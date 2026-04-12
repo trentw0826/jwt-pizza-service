@@ -120,12 +120,18 @@ class DB {
   async getUsers(name = "*", page = 1, perPageLimit = 10) {
     const connection = await this.getConnection();
     try {
-      const offset = this.getOffset(page, perPageLimit);
+      const safeLimit = this.normalizeInt(perPageLimit, {
+        defaultValue: 10,
+        min: 1,
+        max: 100,
+      });
+      const offset = this.getOffset(page, safeLimit);
       // Translate * glob wildcard to SQL LIKE wildcard (matches getFranchises pattern)
-      const nameFilter = name.replace(/\*/g, "%");
+      const normalizedName = typeof name === "string" ? name : "*";
+      const nameFilter = normalizedName.replace(/\*/g, "%");
       const users = await this.query(
         connection,
-        `SELECT id, name, email FROM user WHERE name LIKE ? LIMIT ${offset},${perPageLimit}`,
+        `SELECT id, name, email FROM user WHERE name LIKE ? LIMIT ${offset},${safeLimit}`,
         [`%${nameFilter}%`],
       );
       return users;
@@ -137,20 +143,24 @@ class DB {
   async updateUser(userId, name, email, password) {
     const connection = await this.getConnection();
     try {
-      const params = [];
+      const updates = [];
+      const values = [];
       if (password) {
         const hashedPassword = await bcrypt.hash(password, 10);
-        params.push(`password='${hashedPassword}'`);
+        updates.push("password=?");
+        values.push(hashedPassword);
       }
       if (email) {
-        params.push(`email='${email}'`);
+        updates.push("email=?");
+        values.push(email);
       }
       if (name) {
-        params.push(`name='${name}'`);
+        updates.push("name=?");
+        values.push(name);
       }
-      if (params.length > 0) {
-        const query = `UPDATE user SET ${params.join(", ")} WHERE id=${userId}`;
-        await this.query(connection, query);
+      if (updates.length > 0) {
+        const query = `UPDATE user SET ${updates.join(", ")} WHERE id=?`;
+        await this.query(connection, query, [...values, userId]);
       }
       return this.getUser(email, password);
     } finally {
@@ -203,10 +213,15 @@ class DB {
   async getOrders(user, page = 1) {
     const connection = await this.getConnection();
     try {
-      const offset = this.getOffset(page, config.db.listPerPage);
+      const pageSize = this.normalizeInt(config.db.listPerPage, {
+        defaultValue: 10,
+        min: 1,
+        max: 100,
+      });
+      const offset = this.getOffset(page, pageSize);
       const orders = await this.query(
         connection,
-        `SELECT id, franchiseId, storeId, date FROM dinerOrder WHERE dinerId=? LIMIT ${offset},${config.db.listPerPage}`,
+        `SELECT id, franchiseId, storeId, date FROM dinerOrder WHERE dinerId=? LIMIT ${offset},${pageSize}`,
         [user.id],
       );
       for (const order of orders) {
@@ -343,19 +358,30 @@ class DB {
   async getFranchises(authUser, page = 0, limit = 10, nameFilter = "*") {
     const connection = await this.getConnection();
 
-    const offset = page * limit;
-    nameFilter = nameFilter.replace(/\*/g, "%");
+    const safePage = this.normalizeInt(page, {
+      defaultValue: 0,
+      min: 0,
+      max: 100000,
+    });
+    const safeLimit = this.normalizeInt(limit, {
+      defaultValue: 10,
+      min: 1,
+      max: 100,
+    });
+    const offset = safePage * safeLimit;
+    const normalizedName = typeof nameFilter === "string" ? nameFilter : "*";
+    nameFilter = normalizedName.replace(/\*/g, "%");
 
     try {
       let franchises = await this.query(
         connection,
-        `SELECT id, name FROM franchise WHERE name LIKE ? LIMIT ${limit + 1} OFFSET ${offset}`,
+        `SELECT id, name FROM franchise WHERE name LIKE ? LIMIT ${safeLimit + 1} OFFSET ${offset}`,
         [nameFilter],
       );
 
-      const more = franchises.length > limit;
+      const more = franchises.length > safeLimit;
       if (more) {
-        franchises = franchises.slice(0, limit);
+        franchises = franchises.slice(0, safeLimit);
       }
 
       for (const franchise of franchises) {
@@ -475,7 +501,31 @@ class DB {
   }
 
   getOffset(currentPage = 1, listPerPage) {
-    return (currentPage - 1) * [listPerPage];
+    const safePage = this.normalizeInt(currentPage, {
+      defaultValue: 1,
+      min: 1,
+      max: 100000,
+    });
+    const safeListPerPage = this.normalizeInt(listPerPage, {
+      defaultValue: 10,
+      min: 1,
+      max: 100,
+    });
+    return (safePage - 1) * safeListPerPage;
+  }
+
+  normalizeInt(value, { defaultValue, min, max }) {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed)) {
+      return defaultValue;
+    }
+    if (parsed < min) {
+      return min;
+    }
+    if (parsed > max) {
+      return max;
+    }
+    return parsed;
   }
 
   // Extracts the signature portion of a JWT token for database storage

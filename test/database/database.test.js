@@ -102,6 +102,40 @@ describe("Database Tests", () => {
       expect(updatedUser.email).toBe(newEmail);
     });
 
+    test("should prevent SQL injection in updateUser", async () => {
+      const attackerPassword = "password123";
+      const victimPassword = "password123";
+
+      const attacker = await DB.addUser({
+        name: generateRandomString(),
+        email: `${generateRandomString()}@test.com`,
+        password: attackerPassword,
+        roles: [{ role: Role.Diner }],
+      });
+
+      const victim = await DB.addUser({
+        name: generateRandomString(),
+        email: `${generateRandomString()}@test.com`,
+        password: victimPassword,
+        roles: [{ role: Role.Diner }],
+      });
+
+      const victimOriginalName = victim.name;
+      const payload = "x', email='owned@test.com' WHERE id=999 OR 1=1 -- ";
+
+      const updatedAttacker = await DB.updateUser(
+        attacker.id,
+        payload,
+        attacker.email,
+        attackerPassword,
+      );
+
+      expect(updatedAttacker.name).toBe(payload);
+
+      const victimAfter = await DB.getUser(victim.email, victimPassword);
+      expect(victimAfter.name).toBe(victimOriginalName);
+    });
+
     test("should return the requested page size", async () => {
       const users = await DB.getUsers("*", 1, 10);
       expect(users.length).toBe(10);
