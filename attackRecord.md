@@ -44,14 +44,14 @@
 
 ## Attack 5
 
-| Item           | Result                                                                                                                                                                                                                                                                 |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Date           | Apr 11, 2026                                                                                                                                                                                                                                                           |
-| Classification | Injection                                                                                                                                                                                                                                                              |
-| Severity       | 3                                                                                                                                                                                                                                                                      |
-| Description    | A scripted set of SQL manipulation attempts against `GET /api/franchise` and `GET /api/user` showed malformed pagination payloads could trigger database syntax failures and internal error output. Union payloads did not return injected rows in this run.        |
-| Evidence       | `limit=-1` and `limit=1 UNION SELECT ...` returned `500` before patch; responses included SQL/stack details (e.g., syntax errors near `UNION` and `OFFSET NaN`).                                                                                                     |
-| Corrections    | Sanitize and clamp `page`/`limit` values to integers, parameterize LIMIT/OFFSET in SQL queries, and add regression tests for malformed payloads.                                                                                                                     |
+| Item           | Result                                                                                                                                                                                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Date           | Apr 11, 2026                                                                                                                                                                                                                                                 |
+| Classification | Injection                                                                                                                                                                                                                                                    |
+| Severity       | 3                                                                                                                                                                                                                                                            |
+| Description    | A scripted set of SQL manipulation attempts against `GET /api/franchise` and `GET /api/user` showed malformed pagination payloads could trigger database syntax failures and internal error output. Union payloads did not return injected rows in this run. |
+| Evidence       | `limit=-1` and `limit=1 UNION SELECT ...` returned `500` before patch; responses included SQL/stack details (e.g., syntax errors near `UNION` and `OFFSET NaN`).                                                                                             |
+| Corrections    | Sanitize and clamp `page`/`limit` values to integers, parameterize LIMIT/OFFSET in SQL queries, and add regression tests for malformed payloads.                                                                                                             |
 
 ### Probe Summary (Pre-Patch)
 
