@@ -266,12 +266,13 @@ describe("User Router", () => {
       res.body.users.forEach((u) => expect(u.name).toMatch(/Bulk User/));
     });
 
-    test("regular users can access the list", async () => {
+    test("regular users cannot access the list", async () => {
       const diner = await createUserWithRole(app, Role.Diner);
       const res = await request(app)
         .get("/api/user")
         .set("Authorization", `Bearer ${diner.token}`);
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(403);
+      expect(res.body.message).toBe("unauthorized");
     });
 
     test("returns 401 without a token", async () => {

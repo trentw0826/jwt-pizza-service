@@ -30,3 +30,14 @@
 | Description    | API error responses exposed internal stack traces, revealing file paths and server internals.            |
 | Images         | ![User-facing stack trace](./images/user-facing-stack-trace.png)                                         |
 | Corrections    | Update global error handler to return sanitized errors in production and hide stack traces from clients. |
+
+## Attack 4
+
+| Item           | Result                                                                                                                                                           |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Date           | Apr 11, 2026                                                                                                                                                     |
+| Classification | Security Misconfiguration                                                                                                                                        |
+| Severity       | 3                                                                                                                                                                |
+| Description    | The endpoint at 'GET /api/user' does not properly filter down users by role, only by authentication token. Retrieved a list of all users using basic login token |
+| Images         | ![User-facing stack trace](./images/user-enumeration-script.png)                                                                                                 |
+| Corrections    | Add an explicit admin authorization check to the endpoint, returning 403 without proper permissions                                                              |
