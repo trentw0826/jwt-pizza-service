@@ -56,6 +56,15 @@ describe("Franchise Router", () => {
       expect(res.body.franchises.length).toBeLessThanOrEqual(3);
     });
 
+    test("malformed page and limit inputs are handled safely", async () => {
+      const res = await request(app).get(
+        "/api/franchise?page=0%20OR%201=1&limit=1%20UNION%20SELECT%201,2",
+      );
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.franchises)).toBe(true);
+    });
+
     test("name filter narrows results", async () => {
       const res = await request(app).get(
         `/api/franchise?name=${encodeURIComponent(seededFranchise.name)}`,

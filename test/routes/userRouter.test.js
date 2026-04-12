@@ -266,6 +266,15 @@ describe("User Router", () => {
       res.body.users.forEach((u) => expect(u.name).toMatch(/Bulk User/));
     });
 
+    test("malformed page and limit inputs are handled safely", async () => {
+      const res = await request(app)
+        .get("/api/user?page=1%20OR%201=1&limit=1%20UNION%20SELECT%201")
+        .set("Authorization", `Bearer ${adminUser.token}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.users)).toBe(true);
+    });
+
     test("regular users cannot access the list", async () => {
       const diner = await createUserWithRole(app, Role.Diner);
       const res = await request(app)
