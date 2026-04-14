@@ -95,3 +95,13 @@
 | Severity       | 3                                                                                             |
 | Description    | API error responses exposed internal stack traces, revealing file paths and server internals. |
 | Images         | ![User-facing stack trace](./images/stack-trace-exposed.png)                                  |
+
+## Attack 5
+
+| Item           | Result                                                                                     |
+| -------------- | ------------------------------------------------------------------------------------------ |
+| Date           | Apr 13, 2026                                                                               |
+| Classification | SQL Injection                                                                              |
+| Severity       | 5                                                                                          |
+| Description    | SQL injection overwrote all emails in database. Capable of executing arbitrary SQL queries |
+| Images         | ![SQL injection](./images/SQL-injection.png) ![Missing admin](./images/deleted-admin.png)  |
