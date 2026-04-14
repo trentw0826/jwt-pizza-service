@@ -85,3 +85,13 @@
 | Severity | 3 |
 | Description | The endpoint at 'GET /api/user' does not properly filter down users by role, only by authentication token. Retrieved a list of all users, including password hashes and emails, using basic login token |
 | Images | ![Users enumerated](./images/user-enumeration.png) |
+
+## Attack 4
+
+| Item           | Result                                                                                        |
+| -------------- | --------------------------------------------------------------------------------------------- |
+| Date           | Apr 13, 2026                                                                                  |
+| Classification | Security Misconfiguration                                                                     |
+| Severity       | 3                                                                                             |
+| Description    | API error responses exposed internal stack traces, revealing file paths and server internals. |
+| Images         | ![User-facing stack trace](./images/stack-trace-exposed.png)                                  |
