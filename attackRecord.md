@@ -1,3 +1,5 @@
+# Self Attacks
+
 ## Attack 1
 
 | Item           | Result                                                                   |
@@ -52,3 +54,15 @@
 | Description    | A scripted set of SQL manipulation attempts against `GET /api/franchise` and `GET /api/user` showed malformed pagination payloads could trigger database syntax failures and internal error output. Union payloads did not return injected rows in this run. |
 | Images         | ![User-facing stack trace](./images/malformed-pagination-script-results.png)                                                                                                                                                                                 |
 | Corrections    | Sanitize and clamp `page`/`limit` values to integers, parameterize LIMIT/OFFSET in SQL queries, and add regression tests for malformed payloads.                                                                                                             |
+
+# Peer Attacks
+
+## Attack 1
+
+| Item           | Result                                                     |
+| -------------- | ---------------------------------------------------------- |
+| Date           | Apr 13, 2026                                               |
+| Classification | Authentication Failures                                    |
+| Severity       | 4                                                          |
+| Description    | Admin default credentials were left unchanged              |
+| Images         | ![Logged into admin account](./images/unchanged-admin.png) |
