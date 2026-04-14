@@ -41,7 +41,7 @@
 | Classification | Security Misconfiguration                                                                                                                                        |
 | Severity       | 3                                                                                                                                                                |
 | Description    | The endpoint at 'GET /api/user' does not properly filter down users by role, only by authentication token. Retrieved a list of all users using basic login token |
-| Images         | ![User-facing stack trace](./images/user-enumeration-script.png)                                                                                                 |
+| Images         | ![User enumeration](./images/user-enumeration-script.png)                                                                                                        |
 | Corrections    | Add an explicit admin authorization check to the endpoint, returning 403 without proper permissions                                                              |
 
 ## Attack 5
@@ -76,3 +76,12 @@
 | Severity       | 3                                                                                                                                                       |
 | Description    | The endpoint at 'DELETE /api/franchise/:franchiseId' does not properly filter down users by role, only by authentication token. Deleted all franchises. |
 | Images         | ![Successful deletion script](./images/successful-franchise-deletion.png) ![No franchises](./images/all-franchises-deleted.png)                         |
+
+## Attack 3
+
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Date | Apr 13, 2026 |
+| Classification | Security Misconfiguration |
+| Severity | 3 |
+| Description | The endpoint at 'GET /api/user' does not properly filter down users by role, only by authentication token. Retrieved a list of all users, including password hashes and emails, using basic login token |
+| Images | ![Users enumerated](./images/user-enumeration.png) |
