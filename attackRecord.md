@@ -66,3 +66,13 @@
 | Severity       | 4                                                          |
 | Description    | Admin default credentials were left unchanged              |
 | Images         | ![Logged into admin account](./images/unchanged-admin.png) |
+
+## Attack 2
+
+| Item           | Result                                                                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Date           | Apr 13, 2026                                                                                                                                            |
+| Classification | Security Misconfiguration                                                                                                                               |
+| Severity       | 3                                                                                                                                                       |
+| Description    | The endpoint at 'DELETE /api/franchise/:franchiseId' does not properly filter down users by role, only by authentication token. Deleted all franchises. |
+| Images         | ![Successful deletion script](./images/successful-franchise-deletion.png) ![No franchises](./images/all-franchises-deleted.png)                         |
